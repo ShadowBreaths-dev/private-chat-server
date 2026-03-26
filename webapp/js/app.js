@@ -1,144 +1,127 @@
 /**
- * Oreo Web - Private Real-Time Messaging Application
- * 
- * Features:
- * - Real-time messaging via WebSocket
- * - Profile pictures stored in localStorage
- * - Chat history saved locally
- * - Settings panel with theme toggle
- * - WhatsApp-like UI
+ * OREO CHAT - SIMPLE WORKING VERSION
+ * Real-time messaging like WhatsApp
  */
 
 // ==================== CONFIGURATION ====================
-// Use relative URL - works both locally and on Render
 const getServerUrl = () => {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const host = window.location.host || 'localhost:3000';
-  return `${protocol}//${host}/`;
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.host || 'localhost:3000';
+    return `${protocol}//${host}/`;
 };
 const SERVER_URL = getServerUrl();
 
-// ==================== STATE MANAGEMENT ====================
-const state = {
+// ==================== STATE ====================
+let state = {
     username: null,
     profilePic: null,
     about: "Hey there! I'm using Oreo.",
     currentChat: null,
-    contacts: [],
-    messages: {}, // { username: [messages] }
+    messages: {},
     ws: null,
     isConnected: false,
     onlineUsers: [],
-    theme: 'light',
-    typingTimeout: null,
-    // Call state
-    currentCall: null,
-    callTimer: null,
-    callStartTime: null,
-    isMuted: false,
-    isSpeakerOn: false
+    theme: 'light'
 };
 
 // ==================== DOM ELEMENTS ====================
-const elements = {
-    // Screens
-    loginScreen: document.getElementById('login-screen'),
-    appScreen: document.getElementById('app-screen'),
-    welcomeScreen: document.getElementById('welcome-screen'),
-    
+const elements = {};
+
+function initElements() {
     // Login
-    loginProfilePreview: document.getElementById('login-profile-preview'),
-    loginProfilePic: document.getElementById('login-profile-pic'),
-    usernameInput: document.getElementById('username-input'),
-    loginBtn: document.getElementById('login-btn'),
+    elements.loginScreen = document.getElementById('login-screen');
+    elements.appScreen = document.getElementById('app-screen');
+    elements.usernameInput = document.getElementById('username-input');
+    elements.loginBtn = document.getElementById('login-btn');
+    elements.loginProfilePic = document.getElementById('login-profile-pic');
+    elements.loginProfilePreview = document.getElementById('login-profile-preview');
     
-    // Sidebar
-    myProfileImg: document.getElementById('my-profile-img'),
-    myUsername: document.getElementById('my-username'),
-    myProfileBtn: document.getElementById('my-profile-btn'),
-    newChatBtn: document.getElementById('new-chat-btn'),
-    menuBtn: document.getElementById('menu-btn'),
-    searchInput: document.getElementById('search-input'),
-    contactsList: document.getElementById('contacts-list'),
+    // Main UI
+    elements.myProfileImg = document.getElementById('my-profile-img');
+    elements.myUsername = document.getElementById('my-username');
+    elements.myProfileBtn = document.getElementById('my-profile-btn');
+    elements.newChatBtn = document.getElementById('new-chat-btn');
+    elements.menuBtn = document.getElementById('menu-btn');
+    elements.searchInput = document.getElementById('search-input');
+    elements.contactsList = document.getElementById('contacts-list');
     
     // Chat
-    chatHeader: document.getElementById('chat-header'),
-    backBtn: document.getElementById('back-btn'),
-    chatProfileImg: document.getElementById('chat-profile-img'),
-    chatName: document.getElementById('chat-name'),
-    chatStatus: document.getElementById('chat-status'),
-    messagesContainer: document.getElementById('messages-container'),
-    messagesWrapper: document.getElementById('messages-wrapper'),
-    messageInputContainer: document.getElementById('message-input-container'),
-    messageInput: document.getElementById('message-input'),
-    sendBtn: document.getElementById('send-btn'),
-    emojiBtn: document.getElementById('emoji-btn'),
-    attachBtn: document.getElementById('attach-btn'),
+    elements.welcomeScreen = document.getElementById('welcome-screen');
+    elements.chatHeader = document.getElementById('chat-header');
+    elements.backBtn = document.getElementById('back-btn');
+    elements.chatName = document.getElementById('chat-name');
+    elements.chatStatus = document.getElementById('chat-status');
+    elements.chatProfileImg = document.getElementById('chat-profile-img');
+    elements.messagesContainer = document.getElementById('messages-container');
+    elements.messagesWrapper = document.getElementById('messages-wrapper');
+    elements.messageInputContainer = document.getElementById('message-input-container');
+    elements.messageInput = document.getElementById('message-input');
+    elements.sendBtn = document.getElementById('send-btn');
     
-    // Settings Modal
-    settingsModal: document.getElementById('settings-modal'),
-    settingsBackBtn: document.getElementById('settings-back-btn'),
-    settingsProfileImg: document.getElementById('settings-profile-img'),
-    settingsUsername: document.getElementById('settings-username'),
-    settingsAbout: document.getElementById('settings-about'),
-    editProfileBtn: document.getElementById('edit-profile-btn'),
-    themeToggle: document.getElementById('theme-toggle'),
+    // Modals
+    elements.settingsModal = document.getElementById('settings-modal');
+    elements.settingsBackBtn = document.getElementById('settings-back-btn');
+    elements.newChatModal = document.getElementById('new-chat-modal');
+    elements.newChatBackBtn = document.getElementById('new-chat-back-btn');
+    elements.onlineUsersList = document.getElementById('online-users');
+    elements.manualUsername = document.getElementById('manual-username');
+    elements.startChatBtn = document.getElementById('start-chat-btn');
+    elements.profileEditModal = document.getElementById('profile-edit-modal');
+    elements.confirmModal = document.getElementById('confirm-modal');
     
-    // New Chat Modal
-    newChatModal: document.getElementById('new-chat-modal'),
-    newChatBackBtn: document.getElementById('new-chat-back-btn'),
-    newChatSearch: document.getElementById('new-chat-search'),
-    onlineUsers: document.getElementById('online-users'),
-    manualUsername: document.getElementById('manual-username'),
-    startChatBtn: document.getElementById('start-chat-btn'),
+    // Settings
+    elements.settingsUsername = document.getElementById('settings-username');
+    elements.settingsAbout = document.getElementById('settings-about');
+    elements.settingsProfileImg = document.getElementById('settings-profile-img');
+    elements.editProfileBtn = document.getElementById('edit-profile-btn');
+    elements.themeToggle = document.getElementById('theme-toggle');
+    elements.clearChatHistoryBtn = document.getElementById('clear-chat-history');
+    elements.exportChatsBtn = document.getElementById('export-chats');
+    elements.logoutBtn = document.getElementById('logout-btn');
     
-    // Profile Edit Modal
-    profileEditModal: document.getElementById('profile-edit-modal'),
-    profileEditBackBtn: document.getElementById('profile-edit-back-btn'),
-    saveProfileBtn: document.getElementById('save-profile-btn'),
-    editProfileImg: document.getElementById('edit-profile-img'),
-    editProfilePicInput: document.getElementById('edit-profile-pic-input'),
-    editUsernameInput: document.getElementById('edit-username-input'),
-    editAboutInput: document.getElementById('edit-about-input'),
+    // Profile Edit
+    elements.profileEditBackBtn = document.getElementById('profile-edit-back-btn');
+    elements.saveProfileBtn = document.getElementById('save-profile-btn');
+    elements.editProfileImg = document.getElementById('edit-profile-img');
+    elements.editProfilePicInput = document.getElementById('edit-profile-pic-input');
+    elements.editUsernameInput = document.getElementById('edit-username-input');
+    elements.editAboutInput = document.getElementById('edit-about-input');
     
-    // Confirmation Modal
-    confirmModal: document.getElementById('confirm-modal'),
-    confirmTitle: document.getElementById('confirm-title'),
-    confirmMessage: document.getElementById('confirm-message'),
-    confirmCancel: document.getElementById('confirm-cancel'),
-    confirmOk: document.getElementById('confirm-ok'),
-
-    // Call Modal
-    callModal: document.getElementById('call-modal'),
-    callBackBtn: document.getElementById('call-back-btn'),
-    callTitle: document.getElementById('call-title'),
-    callAvatarImg: document.getElementById('call-avatar-img'),
-    callUsername: document.getElementById('call-username'),
-    callStatus: document.getElementById('call-status'),
-    muteBtn: document.getElementById('mute-btn'),
-    speakerBtn: document.getElementById('speaker-btn'),
-    endCallBtn: document.getElementById('end-call-btn'),
-    callTimer: document.getElementById('call-timer'),
-
-    // Settings Options
-    changeProfilePicBtn: document.getElementById('change-profile-pic'),
-    changeUsernameBtn: document.getElementById('change-username'),
-    changeAboutBtn: document.getElementById('change-about'),
-    changeChatWallpaperBtn: document.getElementById('change-chat-wallpaper'),
-    toggleThemeBtn: document.getElementById('toggle-theme'),
-    clearChatHistoryBtn: document.getElementById('clear-chat-history'),
-    exportChatsBtn: document.getElementById('export-chats'),
-    logoutBtn: document.getElementById('logout-btn')
-};
+    // Confirmation
+    elements.confirmTitle = document.getElementById('confirm-title');
+    elements.confirmMessage = document.getElementById('confirm-message');
+    elements.confirmCancel = document.getElementById('confirm-cancel');
+    elements.confirmOk = document.getElementById('confirm-ok');
+    
+    // Settings options
+    elements.changeProfilePicBtn = document.getElementById('change-profile-pic');
+    elements.changeUsernameBtn = document.getElementById('change-username');
+    elements.changeAboutBtn = document.getElementById('change-about');
+    elements.changeChatWallpaperBtn = document.getElementById('change-chat-wallpaper');
+    
+    // Call modal
+    elements.callModal = document.getElementById('call-modal');
+    elements.callBackBtn = document.getElementById('call-back-btn');
+    elements.callTitle = document.getElementById('call-title');
+    elements.callUsername = document.getElementById('call-username');
+    elements.callStatus = document.getElementById('call-status');
+    elements.endCallBtn = document.getElementById('end-call-btn');
+    elements.muteBtn = document.getElementById('mute-btn');
+    elements.speakerBtn = document.getElementById('speaker-btn');
+    elements.callTimer = document.getElementById('call-timer');
+    
+    // Call buttons in header
+    elements.voiceCallBtn = document.getElementById('voice-call-btn');
+    elements.videoCallBtn = document.getElementById('video-call-btn');
+}
 
 // ==================== INITIALIZATION ====================
 function init() {
+    initElements();
     loadFromStorage();
-    loadWallpaper();
     setupEventListeners();
     applyTheme();
-
-    // Check if user is already logged in
+    
     if (state.username) {
         showAppScreen();
     }
@@ -146,51 +129,37 @@ function init() {
 
 // ==================== LOCAL STORAGE ====================
 function loadFromStorage() {
-    const savedData = localStorage.getItem('oreo_user_data');
-    if (savedData) {
-        const data = JSON.parse(savedData);
-        state.username = data.username;
-        state.profilePic = data.profilePic;
-        state.about = data.about || "Hey there! I'm using Oreo.";
-        state.theme = data.theme || 'light';
+    const data = localStorage.getItem('oreo_data');
+    if (data) {
+        const parsed = JSON.parse(data);
+        state.username = parsed.username;
+        state.profilePic = parsed.profilePic;
+        state.about = parsed.about || "Hey there! I'm using Oreo.";
+        state.theme = parsed.theme || 'light';
     }
-
-    // Load messages
-    const savedMessages = localStorage.getItem('oreo_messages');
-    if (savedMessages) {
-        state.messages = JSON.parse(savedMessages);
-    }
-
-    // Load contacts
-    const savedContacts = localStorage.getItem('oreo_contacts');
-    if (savedContacts) {
-        state.contacts = JSON.parse(savedContacts);
-    }
-}
-
-function loadWallpaper() {
-    const savedWallpaper = localStorage.getItem('oreo_chat_wallpaper');
-    if (savedWallpaper) {
-        document.documentElement.style.setProperty('--chat-wallpaper', `url(${savedWallpaper})`);
+    
+    const msgs = localStorage.getItem('oreo_messages');
+    if (msgs) {
+        state.messages = JSON.parse(msgs);
     }
 }
 
 function saveToStorage() {
-    const userData = {
+    localStorage.setItem('oreo_data', JSON.stringify({
         username: state.username,
         profilePic: state.profilePic,
         about: state.about,
         theme: state.theme
-    };
-    localStorage.setItem('oreo_user_data', JSON.stringify(userData));
+    }));
     localStorage.setItem('oreo_messages', JSON.stringify(state.messages));
-    localStorage.setItem('oreo_contacts', JSON.stringify(state.contacts));
 }
 
 // ==================== THEME ====================
 function applyTheme() {
     document.documentElement.setAttribute('data-theme', state.theme);
-    elements.themeToggle.checked = state.theme === 'dark';
+    if (elements.themeToggle) {
+        elements.themeToggle.checked = state.theme === 'dark';
+    }
 }
 
 function toggleTheme() {
@@ -199,257 +168,151 @@ function toggleTheme() {
     saveToStorage();
 }
 
-// ==================== AUTHENTICATION ====================
-function login() {
-    const username = elements.usernameInput.value.trim();
-    if (!username) {
-        alert('Please enter a username');
-        return;
-    }
-    
-    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-        alert('Username can only contain letters, numbers, and underscores');
-        return;
-    }
-    
-    state.username = username;
-    saveToStorage();
-    showAppScreen();
-    connectToServer();
-}
-
-function logout() {
-    if (state.ws) {
-        state.ws.close();
-    }
-    state.username = null;
-    state.currentChat = null;
-    state.isConnected = false;
-    state.onlineUsers = [];
-    localStorage.clear();
-    location.reload();
-}
-
-// ==================== SCREEN NAVIGATION ====================
+// ==================== SCREENS ====================
 function showAppScreen() {
     elements.loginScreen.classList.add('hidden');
     elements.appScreen.classList.remove('hidden');
     
-    // Update profile
     elements.myUsername.textContent = state.username;
     elements.myProfileImg.src = state.profilePic || getDefaultAvatar();
     
-    // Render contacts
     renderContacts();
+    connectToServer();
 }
 
-// ==================== WEBSOCKET CONNECTION ====================
+// ==================== WEBSOCKET ====================
 function connectToServer() {
-    console.log('🔌 Attempting to connect to WebSocket:', SERVER_URL);
+    console.log('🔌 Connecting to:', SERVER_URL);
     
-    try {
-        state.ws = new WebSocket(SERVER_URL);
-
-        state.ws.onopen = function() {
-            state.isConnected = true;
-            console.log('✅ WebSocket Connected:', SERVER_URL);
-            console.log('👤 Username:', state.username);
-
-            // Send join message immediately
-            const joinData = { type: 'join', username: state.username };
-            console.log('📤 Sending join:', joinData);
-            sendMessage(joinData);
-
-            // Request user list
-            setTimeout(() => {
-                console.log('📤 Requesting user list...');
-                sendMessage({ type: 'get_users' });
-            }, 500);
-        };
-
-        state.ws.onmessage = function(event) {
-            try {
-                const data = JSON.parse(event.data);
-                console.log('📩 Received from server:', data);
-                handleServerMessage(data);
-            } catch (e) {
-                console.error('❌ Error parsing message:', e);
-            }
-        };
-
-        state.ws.onclose = function() {
-            state.isConnected = false;
-            console.log('🔴 WebSocket Disconnected');
-            updateConnectionStatus();
-
-            // Auto-reconnect after 3 seconds
-            setTimeout(() => {
-                if (!state.ws || state.ws.readyState === WebSocket.CLOSED) {
-                    console.log('🔄 Attempting to reconnect...');
-                    connectToServer();
-                }
-            }, 3000);
-        };
-
-        state.ws.onerror = function(error) {
-            console.error('❌ WebSocket Error:', error);
-            console.log('WebSocket readyState:', state.ws.readyState);
-        };
-
-    } catch (e) {
-        console.error('❌ Connection error:', e);
+    state.ws = new WebSocket(SERVER_URL);
+    
+    state.ws.onopen = () => {
+        state.isConnected = true;
+        console.log('✅ Connected to server');
+        
+        // Join with username
+        console.log('📤 Joining as:', state.username);
+        state.ws.send(JSON.stringify({
+            type: 'join',
+            username: state.username
+        }));
+    };
+    
+    state.ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        console.log('📩 Received:', data);
+        handleServerMessage(data);
+    };
+    
+    state.ws.onclose = () => {
         state.isConnected = false;
-    }
+        console.log('🔴 Disconnected');
+        setTimeout(connectToServer, 3000);
+    };
+    
+    state.ws.onerror = (error) => {
+        console.error('❌ WebSocket error:', error);
+    };
 }
 
 function sendMessage(data) {
     if (state.ws && state.ws.readyState === WebSocket.OPEN) {
         state.ws.send(JSON.stringify(data));
+        return true;
     }
+    console.log('❌ Cannot send - not connected');
+    return false;
 }
 
 function handleServerMessage(data) {
-    console.log('Received:', data);
-    
     switch(data.type) {
         case 'user_list':
-            handleUserList(data.users || []);
+            state.onlineUsers = data.users.filter(u => u !== state.username);
+            console.log('👥 Online users:', state.onlineUsers);
+            renderOnlineUsers();
+            updateConnectionStatus();
             break;
             
         case 'message':
             handleIncomingMessage(data);
             break;
             
-        case 'join':
-            handleUserJoin(data.user);
+        case 'user_joined':
+            console.log('✅ User joined:', data.user);
+            if (!state.onlineUsers.includes(data.user)) {
+                state.onlineUsers.push(data.user);
+                renderOnlineUsers();
+            }
             break;
             
-        case 'leave':
-            handleUserLeave(data.user);
+        case 'user_left':
+            console.log('❌ User left:', data.user);
+            state.onlineUsers = state.onlineUsers.filter(u => u !== data.user);
+            renderOnlineUsers();
             break;
-
+            
         case 'typing':
-            handleTypingIndicator(data.user);
+            if (state.currentChat === data.user) {
+                elements.chatStatus.textContent = 'typing...';
+                setTimeout(() => {
+                    if (state.currentChat === data.user) {
+                        elements.chatStatus.textContent = 'online';
+                    }
+                }, 2000);
+            }
             break;
-
+            
         case 'call':
             handleCallMessage(data);
             break;
-
-        case 'error':
-            console.error('Server error:', data.message);
-            break;
     }
-}
-
-function handleUserList(users) {
-    console.log('📋 Received user list:', users);
-    state.onlineUsers = users.filter(u => u !== state.username);
-    console.log('👥 Online users (excluding self):', state.onlineUsers);
-    renderOnlineUsers();
-    updateConnectionStatus();
 }
 
 function handleIncomingMessage(data) {
     const { sender, message, receiver } = data;
+    console.log('💬 Message:', { sender, receiver, message, myUsername: state.username, currentChat: state.currentChat });
     
-    console.log('📨 === INCOMING MESSAGE ===');
-    console.log('   From:', sender);
-    console.log('   To:', receiver);
-    console.log('   My username:', state.username);
-    console.log('   Current chat:', state.currentChat);
-    console.log('   Message:', message);
-
-    // Save message to local storage (always)
+    // Save message
     saveMessage(sender, receiver, message);
-
-    // Determine if this message should be displayed
-    const iAmSender = (sender === state.username);
-    const iAmReceiver = (receiver === state.username);
-    const chattingWithSender = (state.currentChat === sender);
-    const chattingWithReceiver = (state.currentChat === receiver);
     
-    console.log('   I am sender:', iAmSender);
-    console.log('   I am receiver:', iAmReceiver);
-    console.log('   Chatting with sender:', chattingWithSender);
-    console.log('   Chatting with receiver:', chattingWithReceiver);
-
-    // Display message if:
-    // 1. I'm in a chat with the sender (receiving a message)
-    // 2. I'm in a chat with the receiver (my sent message confirmation)
-    const shouldDisplay = (iAmReceiver && chattingWithSender) || (iAmSender && chattingWithReceiver);
+    // Display if in chat with this person
+    const shouldDisplay = (
+        (sender === state.currentChat) || 
+        (receiver === state.currentChat && sender === state.username)
+    );
     
-    console.log('   Should display:', shouldDisplay);
-
+    console.log('Should display:', shouldDisplay);
+    
     if (shouldDisplay) {
-        console.log('   ✅ Adding message to chat UI');
+        const isMine = sender === state.username;
+        console.log('Adding to UI - isMine:', isMine);
+        
         appendMessage({
             sender: sender,
             message: message,
-            timestamp: new Date().toISOString(),
-            isMine: iAmSender  // My messages go on right, theirs on left
+            timestamp: data.timestamp || new Date().toISOString(),
+            isMine: isMine
         });
         scrollToBottom();
-    } else {
-        console.log('   ℹ️ Message not displayed (not in active chat)');
     }
     
-    console.log('📨 === END MESSAGE HANDLING ===\n');
-
-    // Update contact list preview (always)
+    // Update contact preview
     updateContactPreview(sender, message);
-
-    // Show browser notification if window is hidden and not in chat with sender
-    if (document.hidden && !chattingWithSender) {
-        showNotification(sender, message);
-    }
-}
-
-function handleUserJoin(user) {
-    console.log(`${user} joined`);
-    if (!state.onlineUsers.includes(user)) {
-        state.onlineUsers.push(user);
-        renderOnlineUsers();
-    }
-}
-
-function handleUserLeave(user) {
-    console.log(`${user} left`);
-    state.onlineUsers = state.onlineUsers.filter(u => u !== user);
-    renderOnlineUsers();
-}
-
-function handleTypingIndicator(user) {
-    if (state.currentChat === user) {
-        elements.chatStatus.textContent = 'typing...';
-        setTimeout(() => {
-            if (state.currentChat === user) {
-                elements.chatStatus.textContent = 'online';
-            }
-        }, 2000);
-    }
 }
 
 // ==================== MESSAGING ====================
 function saveMessage(sender, receiver, text) {
     const key = getChatKey(sender, receiver);
-    
-    if (!state.messages[key]) {
-        state.messages[key] = [];
-    }
+    if (!state.messages[key]) state.messages[key] = [];
     
     state.messages[key].push({
-        sender: sender,
-        receiver: receiver,
-        message: text,
+        sender, receiver, message: text,
         timestamp: new Date().toISOString()
     });
     
-    // Keep only last 1000 messages per chat
     if (state.messages[key].length > 1000) {
         state.messages[key] = state.messages[key].slice(-1000);
     }
-    
     saveToStorage();
 }
 
@@ -457,52 +320,33 @@ function getChatKey(user1, user2) {
     return [user1, user2].sort().join('::');
 }
 
-function getMessagesForChat(otherUser) {
-    const key = getChatKey(state.username, otherUser);
-    return state.messages[key] || [];
-}
-
 function sendChatMessage() {
     const text = elements.messageInput.value.trim();
-    if (!text || !state.currentChat) {
-        console.log('❌ Cannot send: no text or no current chat');
-        return;
-    }
-
-    console.log('📤 === SENDING MESSAGE ===');
-    console.log('   From:', state.username);
-    console.log('   To:', state.currentChat);
-    console.log('   Message:', text);
-    console.log('   WebSocket connected:', state.ws && state.ws.readyState === WebSocket.OPEN);
-
+    if (!text || !state.currentChat) return;
+    
+    console.log('📤 Sending:', text, 'to', state.currentChat);
+    
     // Send via WebSocket
-    const messageData = {
+    sendMessage({
         type: 'message',
         sender: state.username,
         receiver: state.currentChat,
         message: text
-    };
+    });
     
-    sendMessage(messageData);
-    console.log('   ✅ Message sent via WebSocket');
-
     // Save locally
     saveMessage(state.username, state.currentChat, text);
-
-    // Display immediately (my message on right side)
+    
+    // Display immediately (my message on right)
     appendMessage({
         sender: state.username,
         message: text,
         timestamp: new Date().toISOString(),
         isMine: true
     });
-    console.log('   ✅ Message displayed in UI (isMine: true)');
-
-    // Clear input
+    
     elements.messageInput.value = '';
     scrollToBottom();
-    
-    console.log('📤 === END SEND ===\n');
 }
 
 function appendMessage(msg) {
@@ -512,17 +356,15 @@ function appendMessage(msg) {
     const time = formatTime(msg.timestamp);
     
     let html = '';
-    
-    // Show sender name for received messages
     if (!msg.isMine) {
         html += `<div class="message-sender">${escapeHtml(msg.sender)}</div>`;
     }
-    
     html += `<div class="message-text">${escapeHtml(msg.message)}</div>`;
     html += `<div class="message-time">${time}</div>`;
     
     bubble.innerHTML = html;
     elements.messagesWrapper.appendChild(bubble);
+    console.log('✅ Message added to UI');
 }
 
 function scrollToBottom() {
@@ -532,25 +374,19 @@ function scrollToBottom() {
 function openChat(username) {
     state.currentChat = username;
     
-    // Hide welcome, show chat
     elements.welcomeScreen.classList.add('hidden');
     elements.chatHeader.classList.remove('hidden');
     elements.messagesContainer.classList.remove('hidden');
     elements.messageInputContainer.classList.remove('hidden');
     
-    // Update header
     elements.chatName.textContent = username;
     elements.chatStatus.textContent = 'online';
-    elements.chatProfileImg.src = getDefaultAvatar(); // Could load from contacts
+    elements.chatProfileImg.src = getDefaultAvatar();
     
-    // Load chat history
     loadChatHistory(username);
-    
-    // Focus input
     elements.messageInput.focus();
     
-    // Update active contact
-    updateActiveContact();
+    elements.newChatModal.classList.add('hidden');
 }
 
 function loadChatHistory(username) {
@@ -565,7 +401,6 @@ function loadChatHistory(username) {
             isMine: msg.sender === state.username
         });
     });
-    
     scrollToBottom();
 }
 
@@ -576,44 +411,48 @@ function closeChat() {
     elements.messagesContainer.classList.add('hidden');
     elements.messageInputContainer.classList.add('hidden');
     elements.messagesWrapper.innerHTML = '';
-    
-    updateActiveContact();
+}
+
+function getMessagesForChat(otherUser) {
+    const key = getChatKey(state.username, otherUser);
+    return state.messages[key] || [];
 }
 
 // ==================== CONTACTS ====================
 function renderContacts() {
+    if (!elements.contactsList) return;
+    
     const contacts = getUniqueContacts();
     elements.contactsList.innerHTML = '';
     
     if (contacts.length === 0) {
         elements.contactsList.innerHTML = `
-            <div style="padding: 40px; text-align: center; color: var(--text-secondary);">
-                <i class="fas fa-comments" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+            <div style="padding:40px;text-align:center;color:var(--text-secondary);">
+                <i class="fas fa-comments" style="font-size:48px;margin-bottom:16px;opacity:0.5;"></i>
                 <p>No chats yet</p>
-                <p style="font-size: 13px;">Click + to start a new conversation</p>
-            </div>
-        `;
+                <p style="font-size:13px;">Click + to start a new conversation</p>
+            </div>`;
         return;
     }
     
     contacts.forEach(contact => {
+        const item = document.createElement('div');
+        item.className = 'contact-item';
+        item.dataset.username = contact.username;
+        
         const lastMsg = contact.lastMessage;
         const time = lastMsg ? formatTime(lastMsg.timestamp) : '';
         const preview = lastMsg ? lastMsg.message : 'Start a conversation';
         
-        const item = document.createElement('div');
-        item.className = 'contact-item';
-        item.dataset.username = contact.username;
         item.innerHTML = `
-            <img src="${getDefaultAvatar()}" alt="${contact.username}" class="contact-avatar">
+            <img src="${getDefaultAvatar()}" class="contact-avatar">
             <div class="contact-info">
                 <div class="contact-header">
                     <span class="contact-name">${escapeHtml(contact.username)}</span>
                     <span class="contact-time">${time}</span>
                 </div>
                 <div class="contact-preview">${escapeHtml(preview)}</div>
-            </div>
-        `;
+            </div>`;
         
         item.addEventListener('click', () => openChat(contact.username));
         elements.contactsList.appendChild(item);
@@ -621,27 +460,21 @@ function renderContacts() {
 }
 
 function getUniqueContacts() {
-    const contactMap = new Map();
-    
+    const map = new Map();
     Object.keys(state.messages).forEach(key => {
         const msgs = state.messages[key];
-        if (msgs.length === 0) return;
+        if (!msgs.length) return;
         
-        const [user1, user2] = key.split('::');
-        const otherUser = user1 === state.username ? user2 : user1;
+        const [u1, u2] = key.split('::');
+        const other = u1 === state.username ? u2 : u1;
+        const last = msgs[msgs.length - 1];
         
-        const lastMsg = msgs[msgs.length - 1];
-        
-        if (!contactMap.has(otherUser) || 
-            new Date(lastMsg.timestamp) > new Date(contactMap.get(otherUser).lastMessage.timestamp)) {
-            contactMap.set(otherUser, {
-                username: otherUser,
-                lastMessage: lastMsg
-            });
+        if (!map.has(other) || new Date(last.timestamp) > new Date(map.get(other).lastMessage.timestamp)) {
+            map.set(other, { username: other, lastMessage: last });
         }
     });
     
-    return Array.from(contactMap.values()).sort((a, b) => 
+    return Array.from(map.values()).sort((a, b) => 
         new Date(b.lastMessage.timestamp) - new Date(a.lastMessage.timestamp)
     );
 }
@@ -649,64 +482,231 @@ function getUniqueContacts() {
 function updateContactPreview(username, message) {
     const item = elements.contactsList.querySelector(`[data-username="${CSS.escape(username)}"]`);
     if (item) {
-        const preview = item.querySelector('.contact-preview');
-        const time = item.querySelector('.contact-time');
-        preview.textContent = message;
-        time.textContent = formatTime(new Date().toISOString());
-        
-        // Move to top
+        item.querySelector('.contact-preview').textContent = message;
+        item.querySelector('.contact-time').textContent = formatTime(new Date());
         elements.contactsList.insertBefore(item, elements.contactsList.firstChild);
     }
 }
 
-function updateActiveContact() {
-    document.querySelectorAll('.contact-item').forEach(item => {
-        item.classList.toggle('active', item.dataset.username === state.currentChat);
-    });
-}
-
 // ==================== ONLINE USERS ====================
 function renderOnlineUsers() {
-    console.log('🎨 Rendering online users:', state.onlineUsers);
+    if (!elements.onlineUsersList) return;
     
-    if (!elements.onlineUsers) {
-        console.error('❌ elements.onlineUsers is null!');
-        return;
-    }
+    elements.onlineUsersList.innerHTML = '';
     
-    elements.onlineUsers.innerHTML = '';
-
     if (state.onlineUsers.length === 0) {
-        elements.onlineUsers.innerHTML = `
-            <p style="text-align: center; color: var(--text-secondary); padding: 20px;">
-                <i class="fas fa-user-slash" style="font-size: 24px; margin-bottom: 10px; display: block;"></i>
+        elements.onlineUsersList.innerHTML = `
+            <p style="text-align:center;color:var(--text-secondary);padding:20px;">
+                <i class="fas fa-user-slash" style="font-size:24px;margin-bottom:10px;display:block;"></i>
                 No other users online
-            </p>
-        `;
-        console.log('ℹ️ No other users to display');
+            </p>`;
         return;
     }
-
+    
     state.onlineUsers.forEach(username => {
         const item = document.createElement('div');
         item.className = 'online-user-item';
         item.innerHTML = `
-            <img src="${getDefaultAvatar()}" alt="${username}" class="online-user-avatar">
+            <img src="${getDefaultAvatar()}" class="online-user-avatar">
             <div class="online-user-info">
                 <div class="online-user-name">${escapeHtml(username)}</div>
                 <div class="online-user-status">online</div>
-            </div>
-        `;
-
+            </div>`;
+        
         item.addEventListener('click', () => {
             openChat(username);
-            elements.newChatModal.classList.add('hidden');
         });
+        
+        elements.onlineUsersList.appendChild(item);
+    });
+}
 
-        elements.onlineUsers.appendChild(item);
+// ==================== UTILITIES ====================
+function formatTime(iso) {
+    const date = new Date(iso);
+    const now = new Date();
+    const today = date.toDateString() === now.toDateString();
+    return today ? 
+        date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) :
+        date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function getDefaultAvatar() {
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(state.username || 'User')}&background=00a884&color=fff&size=128`;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function updateConnectionStatus() {
+    const status = document.querySelector('.status-text');
+    if (status) status.textContent = state.isConnected ? 'online' : 'connecting...';
+}
+
+function exportChats() {
+    const data = { username: state.username, date: new Date().toISOString(), messages: state.messages };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `oreo-chat-${state.username}-${Date.now()}.json`;
+    a.click();
+}
+
+function clearChatHistory() {
+    state.messages = {};
+    saveToStorage();
+    if (state.currentChat) loadChatHistory(state.currentChat);
+    renderContacts();
+}
+
+function logout() {
+    sendMessage({ type: 'leave', user: state.username });
+    if (state.ws) state.ws.close();
+    localStorage.clear();
+    location.reload();
+}
+
+// ==================== EVENT LISTENERS ====================
+function setupEventListeners() {
+    // Login
+    elements.loginBtn.addEventListener('click', () => {
+        const username = elements.usernameInput.value.trim();
+        if (!username) {
+            alert('Enter a username');
+            return;
+        }
+        if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+            alert('Letters, numbers, underscores only');
+            return;
+        }
+        state.username = username;
+        saveToStorage();
+        showAppScreen();
     });
     
-    console.log('✅ Rendered', state.onlineUsers.length, 'online users');
+    elements.usernameInput.addEventListener('keypress', e => {
+        if (e.key === 'Enter') elements.loginBtn.click();
+    });
+    
+    elements.loginProfilePic.addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = ev => {
+                state.profilePic = ev.target.result;
+                elements.loginProfilePreview.innerHTML = `<img src="${state.profilePic}">`;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    // Profile
+    elements.myProfileBtn.addEventListener('click', openSettings);
+    elements.menuBtn.addEventListener('click', openSettings);
+    
+    // New chat
+    elements.newChatBtn.addEventListener('click', () => {
+        elements.newChatModal.classList.remove('hidden');
+        renderOnlineUsers();
+    });
+    
+    elements.newChatBackBtn.addEventListener('click', () => {
+        elements.newChatModal.classList.add('hidden');
+    });
+    
+    elements.startChatBtn.addEventListener('click', () => {
+        const username = elements.manualUsername.value.trim();
+        if (username) {
+            openChat(username);
+            elements.manualUsername.value = '';
+        }
+    });
+    
+    elements.manualUsername.addEventListener('keypress', e => {
+        if (e.key === 'Enter') elements.startChatBtn.click();
+    });
+    
+    // Back button
+    elements.backBtn.addEventListener('click', closeChat);
+    
+    // Send message
+    elements.sendBtn.addEventListener('click', sendChatMessage);
+    elements.messageInput.addEventListener('keypress', e => {
+        if (e.key === 'Enter') sendChatMessage();
+    });
+    
+    // Typing
+    elements.messageInput.addEventListener('input', () => {
+        if (state.currentChat && state.isConnected) {
+            sendMessage({ type: 'typing', user: state.username, to: state.currentChat });
+        }
+    });
+    
+    // Settings
+    elements.settingsBackBtn.addEventListener('click', closeSettings);
+    elements.settingsModal.querySelector('.modal-overlay').addEventListener('click', closeSettings);
+    
+    elements.editProfileBtn.addEventListener('click', openProfileEdit);
+    elements.profileEditBackBtn.addEventListener('click', closeProfileEdit);
+    elements.profileEditModal.querySelector('.modal-overlay').addEventListener('click', closeProfileEdit);
+    elements.saveProfileBtn.addEventListener('click', saveProfile);
+    
+    elements.changeProfilePicBtn.addEventListener('click', () => elements.editProfilePicInput.click());
+    elements.editProfilePicInput.addEventListener('change', e => changeProfilePicture(e.target.files[0]));
+    
+    elements.changeUsernameBtn.addEventListener('click', () => {
+        elements.settingsModal.classList.add('hidden');
+        openProfileEdit();
+    });
+    
+    elements.changeAboutBtn.addEventListener('click', () => {
+        elements.settingsModal.classList.add('hidden');
+        openProfileEdit();
+    });
+    
+    elements.changeChatWallpaperBtn.addEventListener('click', () => {
+        const url = prompt('Enter image URL (empty for default):');
+        if (url !== null) {
+            if (url.trim() === '') {
+                document.documentElement.style.setProperty('--chat-wallpaper', 'none');
+                localStorage.removeItem('oreo_wallpaper');
+            } else {
+                document.documentElement.style.setProperty('--chat-wallpaper', `url(${url})`);
+                localStorage.setItem('oreo_wallpaper', url);
+            }
+        }
+    });
+    
+    elements.themeToggle.addEventListener('change', toggleTheme);
+    elements.clearChatHistoryBtn.addEventListener('click', () => {
+        if (confirm('Clear all chat history?')) clearChatHistory();
+    });
+    elements.exportChatsBtn.addEventListener('click', exportChats);
+    elements.logoutBtn.addEventListener('click', () => {
+        if (confirm('Logout?')) logout();
+    });
+    
+    // Search
+    elements.searchInput.addEventListener('input', e => {
+        const query = e.target.value.toLowerCase();
+        document.querySelectorAll('.contact-item').forEach(item => {
+            const name = item.dataset.username.toLowerCase();
+            item.style.display = name.includes(query) ? 'flex' : 'none';
+        });
+    });
+    
+    // Call buttons
+    if (elements.voiceCallBtn) elements.voiceCallBtn.addEventListener('click', () => startCall(false));
+    if (elements.videoCallBtn) elements.videoCallBtn.addEventListener('click', () => startCall(true));
+    if (elements.callBackBtn) elements.callBackBtn.addEventListener('click', endCall);
+    if (elements.endCallBtn) elements.endCallBtn.addEventListener('click', endCall);
+    if (elements.muteBtn) elements.muteBtn.addEventListener('click', toggleMute);
+    if (elements.speakerBtn) elements.speakerBtn.addEventListener('click', toggleSpeaker);
+    if (elements.callModal) elements.callModal.querySelector('.modal-overlay').addEventListener('click', endCall);
 }
 
 // ==================== SETTINGS ====================
@@ -733,48 +733,35 @@ function closeProfileEdit() {
 }
 
 function saveProfile() {
-    const newUsername = elements.editUsernameInput.value.trim();
-    const newAbout = elements.editAboutInput.value.trim();
+    const username = elements.editUsernameInput.value.trim();
+    const about = elements.editAboutInput.value.trim();
     
-    if (!newUsername) {
-        alert('Username cannot be empty');
-        return;
-    }
+    if (!username) { alert('Username required'); return; }
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) { alert('Invalid username'); return; }
     
-    if (!/^[a-zA-Z0-9_]+$/.test(newUsername)) {
-        alert('Username can only contain letters, numbers, and underscores');
-        return;
-    }
-    
-    state.username = newUsername;
-    state.about = newAbout || "Hey there! I'm using Oreo.";
-    
+    state.username = username;
+    state.about = about || "Hey there! I'm using Oreo.";
     saveToStorage();
-    updateProfileUI();
-    closeProfileEdit();
     
-    // Reconnect with new username
-    if (state.ws) {
-        state.ws.close();
-    }
-    setTimeout(() => connectToServer(), 500);
-}
-
-function updateProfileUI() {
     elements.myUsername.textContent = state.username;
     elements.settingsUsername.textContent = state.username;
     elements.settingsAbout.textContent = state.about;
+    
+    closeProfileEdit();
+    
+    // Reconnect with new username
+    sendMessage({ type: 'leave', user: state.username });
+    setTimeout(() => {
+        if (state.ws) state.ws.close();
+    }, 500);
 }
 
 function changeProfilePicture(file) {
     if (!file) return;
-    
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = e => {
         state.profilePic = e.target.result;
         saveToStorage();
-        
-        // Update all profile images
         elements.myProfileImg.src = state.profilePic;
         elements.settingsProfileImg.src = state.profilePic;
         elements.editProfileImg.src = state.profilePic;
@@ -782,396 +769,56 @@ function changeProfilePicture(file) {
     reader.readAsDataURL(file);
 }
 
-// ==================== UTILITIES ====================
-function formatTime(isoString) {
-    const date = new Date(isoString);
-    const now = new Date();
-    const isToday = date.toDateString() === now.toDateString();
-    
-    if (isToday) {
-        return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    } else {
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    }
-}
+// ==================== CALLS ====================
+let callState = { active: false, timer: null, startTime: null };
 
-function getDefaultAvatar() {
-    // Generate a default avatar using UI Avatars
-    const name = state.username || 'User';
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=00a884&color=fff&size=128`;
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function showNotification(title, body) {
-    if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(title, {
-            body: body,
-            icon: getDefaultAvatar()
-        });
-    }
-}
-
-function requestNotificationPermission() {
-    if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission();
-    }
-}
-
-function updateConnectionStatus() {
-    const status = state.isConnected ? 'online' : 'connecting...';
-    document.querySelector('.status-text').textContent = status;
-}
-
-// ==================== EXPORT/IMPORT ====================
-function exportChats() {
-    const data = {
-        username: state.username,
-        exportDate: new Date().toISOString(),
-        messages: state.messages
-    };
-    
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `oreo-chat-export-${state.username}-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-}
-
-function clearChatHistory() {
-    state.messages = {};
-    saveToStorage();
-    
-    if (state.currentChat) {
-        loadChatHistory(state.currentChat);
-    }
-    
-    renderContacts();
-}
-
-// ==================== EVENT LISTENERS ====================
-function setupEventListeners() {
-    // Login
-    elements.loginBtn.addEventListener('click', login);
-    elements.usernameInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') login();
-    });
-    
-    elements.loginProfilePic.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                state.profilePic = ev.target.result;
-                elements.loginProfilePreview.innerHTML = `<img src="${state.profilePic}" alt="Profile">`;
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-    
-    // Profile button
-    elements.myProfileBtn.addEventListener('click', openSettings);
-    
-    // New chat
-    elements.newChatBtn.addEventListener('click', () => {
-        elements.newChatModal.classList.remove('hidden');
-        renderOnlineUsers();
-    });
-    
-    elements.newChatBackBtn.addEventListener('click', () => {
-        elements.newChatModal.classList.add('hidden');
-    });
-    
-    elements.startChatBtn.addEventListener('click', () => {
-        const username = elements.manualUsername.value.trim();
-        if (username) {
-            openChat(username);
-            elements.newChatModal.classList.add('hidden');
-            elements.manualUsername.value = '';
-        }
-    });
-    
-    elements.manualUsername.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            elements.startChatBtn.click();
-        }
-    });
-    
-    // Menu
-    elements.menuBtn.addEventListener('click', openSettings);
-    
-    // Back button
-    elements.backBtn.addEventListener('click', closeChat);
-    
-    // Send message
-    elements.sendBtn.addEventListener('click', sendChatMessage);
-    elements.messageInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            sendChatMessage();
-        }
-    });
-    
-    // Typing indicator
-    elements.messageInput.addEventListener('input', () => {
-        if (state.currentChat && state.isConnected) {
-            sendMessage({
-                type: 'typing',
-                user: state.username
-            });
-        }
-    });
-    
-    // Settings
-    elements.settingsBackBtn.addEventListener('click', closeSettings);
-    elements.settingsModal.querySelector('.modal-overlay').addEventListener('click', closeSettings);
-    
-    // Profile edit
-    elements.editProfileBtn.addEventListener('click', openProfileEdit);
-    elements.profileEditBackBtn.addEventListener('click', closeProfileEdit);
-    elements.profileEditModal.querySelector('.modal-overlay').addEventListener('click', closeProfileEdit);
-    elements.saveProfileBtn.addEventListener('click', saveProfile);
-    
-    // Change profile picture
-    elements.changeProfilePicBtn.addEventListener('click', () => {
-        elements.editProfilePicInput.click();
-    });
-
-    elements.editProfilePicInput.addEventListener('change', (e) => {
-        changeProfilePicture(e.target.files[0]);
-    });
-
-    // Change username - open profile edit modal
-    elements.changeUsernameBtn.addEventListener('click', () => {
-        elements.settingsModal.classList.add('hidden');
-        openProfileEdit();
-    });
-
-    // Change about - open profile edit modal
-    elements.changeAboutBtn.addEventListener('click', () => {
-        elements.settingsModal.classList.add('hidden');
-        openProfileEdit();
-    });
-
-    // Change chat wallpaper
-    elements.changeChatWallpaperBtn.addEventListener('click', () => {
-        const wallpaper = prompt('Enter wallpaper URL (or leave empty for default):');
-        if (wallpaper !== null) {
-            if (wallpaper.trim() === '') {
-                document.documentElement.style.setProperty('--chat-wallpaper', 'none');
-                localStorage.removeItem('oreo_chat_wallpaper');
-            } else {
-                document.documentElement.style.setProperty('--chat-wallpaper', `url(${wallpaper})`);
-                localStorage.setItem('oreo_chat_wallpaper', wallpaper);
-            }
-        }
-    });
-
-    // Theme toggle
-    elements.themeToggle.addEventListener('change', toggleTheme);
-    
-    // Clear chat history
-    elements.clearChatHistoryBtn.addEventListener('click', () => {
-        showConfirmModal(
-            'Clear Chat History',
-            'This will delete all your chat messages. This action cannot be undone.',
-            () => {
-                clearChatHistory();
-                elements.confirmModal.classList.add('hidden');
-            }
-        );
-    });
-    
-    // Export chats
-    elements.exportChatsBtn.addEventListener('click', exportChats);
-    
-    // Logout
-    elements.logoutBtn.addEventListener('click', () => {
-        showConfirmModal(
-            'Logout',
-            'Are you sure you want to logout? All local data will be cleared.',
-            logout
-        );
-    });
-    
-    // Search
-    elements.searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase();
-        document.querySelectorAll('.contact-item').forEach(item => {
-            const name = item.dataset.username.toLowerCase();
-            item.style.display = name.includes(query) ? 'flex' : 'none';
-        });
-    });
-    
-    // Request notification permission on first interaction
-    document.addEventListener('click', requestNotificationPermission, { once: true });
-    
-    // Handle browser close
-    window.addEventListener('beforeunload', () => {
-        if (state.ws) {
-            sendMessage({ type: 'leave', user: state.username });
-            state.ws.close();
-        }
-    });
-}
-
-// ==================== CONFIRMATION MODAL ====================
-let confirmCallback = null;
-
-function showConfirmModal(title, message, onConfirm) {
-    elements.confirmTitle.textContent = title;
-    elements.confirmMessage.textContent = message;
-    confirmCallback = onConfirm;
-    elements.confirmModal.classList.remove('hidden');
-}
-
-elements.confirmCancel.addEventListener('click', () => {
-    elements.confirmModal.classList.add('hidden');
-    confirmCallback = null;
-});
-
-elements.confirmOk.addEventListener('click', () => {
-    if (confirmCallback) {
-        confirmCallback();
-    }
-    elements.confirmModal.classList.add('hidden');
-    confirmCallback = null;
-});
-
-elements.confirmModal.querySelector('.modal-overlay').addEventListener('click', () => {
-    elements.confirmModal.classList.add('hidden');
-    confirmCallback = null;
-});
-
-// ==================== CALL FUNCTIONS ====================
-function startCall(isVideoCall = false) {
+function startCall(isVideo) {
     if (!state.currentChat) return;
     
-    console.log('📞 Starting', isVideoCall ? 'video' : 'voice', 'call with', state.currentChat);
+    callState = { active: true, with: state.currentChat, isVideo, startTime: Date.now() };
     
-    state.currentCall = {
-        with: state.currentChat,
-        isVideo: isVideoCall,
-        startTime: Date.now()
-    };
-    
-    // Show call modal
     elements.callUsername.textContent = state.currentChat;
-    elements.callTitle.textContent = isVideoCall ? 'Video Call' : 'Voice Call';
-    elements.callAvatarImg.src = getDefaultAvatar();
+    elements.callTitle.textContent = isVideo ? 'Video Call' : 'Voice Call';
     elements.callStatus.textContent = 'Calling...';
     elements.callModal.classList.remove('hidden');
     
-    // Send call request via WebSocket
-    sendMessage({
-        type: 'call',
-        action: 'start',
-        from: state.username,
-        to: state.currentChat,
-        isVideo: isVideoCall
-    });
+    sendMessage({ type: 'call', action: 'start', from: state.username, to: state.currentChat, isVideo });
     
-    // Start timer
-    state.callStartTime = Date.now();
-    state.callTimer = setInterval(updateCallTimer, 1000);
-}
-
-function updateCallTimer() {
-    const elapsed = Math.floor((Date.now() - state.callStartTime) / 1000);
-    const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
-    const seconds = (elapsed % 60).toString().padStart(2, '0');
-    elements.callTimer.textContent = `${minutes}:${seconds}`;
+    callState.timer = setInterval(() => {
+        const sec = Math.floor((Date.now() - callState.startTime) / 1000);
+        const m = String(Math.floor(sec / 60)).padStart(2, '0');
+        const s = String(sec % 60).padStart(2, '0');
+        if (elements.callTimer) elements.callTimer.textContent = `${m}:${s}`;
+    }, 1000);
 }
 
 function endCall() {
-    if (!state.currentCall) return;
+    if (!callState.active) return;
     
-    console.log('📞 Ending call with', state.currentCall.with);
+    sendMessage({ type: 'call', action: 'end', from: state.username, to: callState.with });
     
-    // Send end call signal
-    sendMessage({
-        type: 'call',
-        action: 'end',
-        from: state.username,
-        to: state.currentCall.with
-    });
-    
-    // Stop timer
-    if (state.callTimer) {
-        clearInterval(state.callTimer);
-        state.callTimer = null;
-    }
-    
-    // Close modal
+    if (callState.timer) clearInterval(callState.timer);
+    callState = { active: false };
     elements.callModal.classList.add('hidden');
-    state.currentCall = null;
-    state.isMuted = false;
-    state.isSpeakerOn = false;
 }
 
 function toggleMute() {
-    state.isMuted = !state.isMuted;
-    elements.muteBtn.classList.toggle('active', state.isMuted);
-    elements.muteBtn.innerHTML = state.isMuted 
-        ? '<i class="fas fa-microphone-slash"></i><span>Unmute</span>'
-        : '<i class="fas fa-microphone"></i><span>Mute</span>';
+    elements.muteBtn.classList.toggle('active');
 }
 
 function toggleSpeaker() {
-    state.isSpeakerOn = !state.isSpeakerOn;
-    elements.speakerBtn.classList.toggle('active', state.isSpeakerOn);
+    elements.speakerBtn.classList.toggle('active');
 }
 
-// Call event listeners
-if (elements.callBackBtn) {
-    elements.callBackBtn.addEventListener('click', endCall);
-}
-
-if (elements.endCallBtn) {
-    elements.endCallBtn.addEventListener('click', endCall);
-}
-
-if (elements.muteBtn) {
-    elements.muteBtn.addEventListener('click', toggleMute);
-}
-
-if (elements.speakerBtn) {
-    elements.speakerBtn.addEventListener('click', toggleSpeaker);
-}
-
-elements.callModal.querySelector('.modal-overlay').addEventListener('click', endCall);
-
-// Handle incoming call messages
 function handleCallMessage(data) {
-    console.log('📞 Call message:', data);
-    
     if (data.action === 'start') {
-        // Incoming call
-        const caller = data.from;
-        const isVideo = data.isVideo;
-        
-        if (confirm(`${caller} is ${isVideoCall ? 'video' : 'voice'} calling you. Accept?`)) {
-            startCall(isVideo);
+        if (confirm(`${data.from} is calling. Accept?`)) {
+            startCall(data.isVideo);
         }
     } else if (data.action === 'end') {
-        // Call ended
         endCall();
     }
 }
 
-// Add call buttons event listeners
-if (elements.voiceCallBtn) {
-    elements.voiceCallBtn.addEventListener('click', () => startCall(false));
-}
-
-if (elements.videoCallBtn) {
-    elements.videoCallBtn.addEventListener('click', () => startCall(true));
-}
-
-// ==================== START APP ====================
-init();
+// ==================== START ====================
+window.addEventListener('DOMContentLoaded', init);

@@ -1,256 +1,223 @@
-const express = require("express");
-const WebSocket = require("ws");
-const path = require("path");
-const fs = require("fs");
+/**
+ * SIMPLEST POSSIBLE REAL-TIME CHAT
+ * No complexity - just pure working code
+ */
+const express = require('express');
+const WebSocket = require('ws');
+const path = require('path');
+const http = require('http');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Create server that handles both HTTP and WebSocket
-const server = app.listen(PORT, () => {
-  console.log(`\n🍪 Oreo Server Running on port ${PORT}`);
-  console.log(`   WebSocket: ws://localhost:${PORT}`);
-  console.log(`   Web App: http://localhost:${PORT}`);
-});
+// Create HTTP server
+const server = http.createServer(app);
 
-// =============================================================================
-// SERVE STATIC FILES (Web App)
-// =============================================================================
-
-// Serve the webapp folder
+// Serve static files from webapp folder
 const webappPath = path.join(__dirname, 'webapp');
-const indexPath = path.join(webappPath, 'index.html');
-
-// Serve static files (css, js, images)
 app.use(express.static(webappPath));
 
-// Serve index.html for root
+// Root route
 app.get('/', (req, res) => {
-  res.sendFile(indexPath);
+    res.sendFile(path.join(webappPath, 'index.html'));
 });
 
-// Health check endpoint (MUST be before wildcard)
+// Health check
 app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    onlineUsers: getOnlineUsers().length,
-    users: getOnlineUsers()
-  });
+    res.json({ 
+        status: 'ok', 
+        users: Object.keys(clients),
+        connections: wss.clients.size
+    });
 });
 
-// Handle all other routes - serve index.html (for SPA routing)
-app.get('*', (req, res) => {
-  res.sendFile(indexPath);
+// Create WebSocket server
+const wss = new WebSocket.Server({ 
+    server,
+    pingInterval: 25000,
+    pingTimeout: 5000
 });
 
-// =============================================================================
-// WEBSOCKET SERVER WITH PING/PONG
-// =============================================================================
+// Store clients: username -> { ws, connectedAt }
+const clients = {};
 
-const wss = new WebSocket.Server({
-  server,
-  pingInterval: 20000,  // Ping every 20 seconds
-  pingTimeout: 5000     // Wait 5 seconds for pong
+console.log('\n🍪 OREO SERVER STARTING...\n');
+
+// Handle WebSocket connections
+wss.on('connection', (ws) => {
+    console.log('🟢 NEW CONNECTION - Total:', wss.clients.size);
+    
+    let username = null;
+
+    // Handle incoming messages
+    ws.on('message', (message) => {
+        try {
+            const data = JSON.parse(message);
+            console.log('📥 RECEIVED:', data.type, data);
+
+            switch(data.type) {
+                case 'join':
+                    username = data.username;
+                    if (username && !clients[username]) {
+                        clients[username] = { ws, connectedAt: Date.now() };
+                        console.log('   ✅ USER JOINED:', username);
+                        console.log('   👥 ONLINE:', Object.keys(clients));
+                        
+                        // Send user list to EVERYONE including sender
+                        broadcast({
+                            type: 'user_list',
+                            users: Object.keys(clients)
+                        });
+                        
+                        // Send join notification
+                        broadcast({
+                            type: 'user_joined',
+                            user: username
+                        });
+                    }
+                    break;
+
+                case 'message':
+                    const { sender, receiver, message: msgContent } = data;
+                    console.log('   💬 MESSAGE:', sender, '->', receiver, ':', msgContent);
+                    
+                    // Send to receiver
+                    if (clients[receiver] && clients[receiver].ws.readyState === WebSocket.OPEN) {
+                        console.log('   ✅ Delivered to', receiver);
+                        clients[receiver].ws.send(JSON.stringify({
+                            type: 'message',
+                            sender: sender,
+                            receiver: receiver,
+                            message: msgContent,
+                            timestamp: new Date().toISOString()
+                        }));
+                    } else {
+                        console.log('   ❌ Receiver', receiver, 'not found or not connected');
+                    }
+                    
+                    // Send confirmation back to sender
+                    if (clients[sender] && clients[sender].ws.readyState === WebSocket.OPEN) {
+                        clients[sender].ws.send(JSON.stringify({
+                            type: 'message',
+                            sender: sender,
+                            receiver: receiver,
+                            message: msgContent,
+                            timestamp: new Date().toISOString(),
+                            confirmed: true
+                        }));
+                    }
+                    break;
+
+                case 'typing':
+                    // Forward typing indicator to receiver
+                    if (data.to && clients[data.to]) {
+                        clients[data.to].ws.send(JSON.stringify({
+                            type: 'typing',
+                            user: data.user
+                        }));
+                    }
+                    break;
+
+                case 'get_users':
+                    // Send current user list
+                    ws.send(JSON.stringify({
+                        type: 'user_list',
+                        users: Object.keys(clients)
+                    }));
+                    break;
+
+                case 'call':
+                    // Forward call signal
+                    if (data.to && clients[data.to]) {
+                        clients[data.to].ws.send(JSON.stringify({
+                            type: 'call',
+                            action: data.action,
+                            from: data.from,
+                            to: data.to,
+                            isVideo: data.isVideo
+                        }));
+                    }
+                    break;
+
+                case 'leave':
+                    if (data.user && clients[data.user]) {
+                        delete clients[data.user];
+                        broadcast({
+                            type: 'user_left',
+                            user: data.user
+                        });
+                        broadcast({
+                            type: 'user_list',
+                            users: Object.keys(clients)
+                        });
+                    }
+                    break;
+            }
+        } catch (e) {
+            console.error('❌ ERROR:', e.message);
+        }
+    });
+
+    // Handle disconnect
+    ws.on('close', () => {
+        console.log('🔴 CONNECTION CLOSED');
+        if (username && clients[username]) {
+            delete clients[username];
+            console.log('   ❌ USER LEFT:', username);
+            console.log('   👥 ONLINE:', Object.keys(clients));
+            
+            broadcast({
+                type: 'user_left',
+                user: username
+            });
+            
+            broadcast({
+                type: 'user_list',
+                users: Object.keys(clients)
+            });
+        }
+    });
+
+    ws.on('error', (error) => {
+        console.error('❌ WebSocket ERROR:', error.message);
+    });
+
+    ws.on('pong', () => {
+        if (username && clients[username]) {
+            clients[username].lastPong = Date.now();
+        }
+    });
 });
-
-// Store connected users: { username: ws }
-let clients = {};
-
-// Store all online usernames
-function getOnlineUsers() {
-  return Object.keys(clients);
-}
 
 // Broadcast to all connected clients
-function broadcast(data, excludeWs = null) {
-  const message = JSON.stringify(data);
-  wss.clients.forEach(client => {
-    if (client !== excludeWs && client.readyState === WebSocket.OPEN) {
-      client.send(message);
-    }
-  });
+function broadcast(data) {
+    const message = JSON.stringify(data);
+    wss.clients.forEach(client => {
+        if (client.readyState === WebSocket.OPEN) {
+            client.send(message);
+        }
+    });
 }
 
-// Send to specific user
-function sendToUser(username, data) {
-  const ws = clients[username];
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(data));
-  }
-}
-
-// WebSocket heartbeat for each connection
-wss.on("connection", (ws) => {
-  console.log(`\n🟢 New connection`);
-  console.log(`   Total connections: ${wss.clients.size}`);
-  
-  // Mark connection as alive
-  ws.isAlive = true;
-  
-  ws.on("pong", () => {
-    ws.isAlive = true;
-  });
-
-  let username = null;
-
-  ws.on("message", (message) => {
-    try {
-      const data = JSON.parse(message);
-      console.log(`📥 Received:`, JSON.stringify(data));
-
-      switch(data.type) {
-        case "join":
-          // User joined with username
-          username = data.username;
-          if (username) {
-            clients[username] = ws;
-            console.log(`   ${username} joined`);
-            console.log(`   Online users: ${JSON.stringify(Object.keys(clients))}`);
-
-            // Send user list to everyone
-            const userList = getOnlineUsers();
-            console.log(`   Broadcasting user list: ${JSON.stringify(userList)}`);
-            broadcast({
-              type: "user_list",
-              users: userList
-            });
-
-            // Send join notification
-            broadcast({
-              type: "join",
-              user: username
-            });
-          }
-          break;
-
-        case "message":
-          // Chat message from one user to another
-          const { sender, receiver, message: msgContent } = data;
-          console.log(`   ${sender} -> ${receiver}: ${msgContent}`);
-          
-          // Save message (in production, save to database)
-          // For now, just forward to receiver
-          
-          // Send to receiver
-          sendToUser(receiver, {
-            type: "message",
-            sender: sender,
-            receiver: receiver,
-            message: msgContent
-          });
-          
-          // Also send back to sender (for confirmation)
-          sendToUser(sender, {
-            type: "message",
-            sender: sender,
-            receiver: receiver,
-            message: msgContent
-          });
-          break;
-
-        case "get_users":
-          // Send current list of online users
-          ws.send(JSON.stringify({
-            type: "user_list",
-            users: getOnlineUsers()
-          }));
-          break;
-
-        case "typing":
-          // Typing indicator
-          const { user } = data;
-          broadcast({
-            type: "typing",
-            user: user
-          });
-          break;
-
-        case "call":
-          // Voice/Video call signaling
-          const { action, from, to, isVideo } = data;
-          console.log(`   📞 Call ${action}: ${from} -> ${to} (${isVideo ? 'video' : 'voice'})`);
-          
-          // Forward call signal to receiver
-          sendToUser(to, {
-            type: "call",
-            action: action,
-            from: from,
-            to: to,
-            isVideo: isVideo
-          });
-          break;
-
-        case "leave":
-          // User leaving
-          const leavingUser = data.user;
-          if (leavingUser && clients[leavingUser]) {
-            delete clients[leavingUser];
-            console.log(`   ${leavingUser} left`);
-            
-            broadcast({
-              type: "leave",
-              user: leavingUser
-            });
-            
-            broadcast({
-              type: "user_list",
-              users: getOnlineUsers()
-            });
-          }
-          break;
-
-        default:
-          console.log(`   Unknown message type:`, data.type);
-      }
-    } catch (e) {
-      console.error(`❌ Error parsing message:`, e);
-      ws.send(JSON.stringify({
-        type: "error",
-        message: "Invalid message format"
-      }));
-    }
-  });
-
-  ws.on("close", () => {
-    console.log(`\n🔴 Connection closed`);
-    
-    if (username) {
-      delete clients[username];
-      console.log(`   ${username} disconnected`);
-      
-      // Notify others
-      broadcast({
-        type: "leave",
-        user: username
-      });
-      
-      broadcast({
-        type: "user_list",
-        users: getOnlineUsers()
-      });
-    }
-  });
-
-  ws.on("error", (error) => {
-    console.error(`❌ WebSocket error:`, error);
-  });
-});
-
-// Interval to ping clients and close dead connections
-const interval = setInterval(() => {
-  wss.clients.forEach((ws) => {
-    if (ws.isAlive === false) {
-      return ws.terminate();
-    }
-    ws.isAlive = false;
-    ws.ping();
-  });
+// Heartbeat interval
+const heartbeat = setInterval(() => {
+    wss.clients.forEach(ws => {
+        if (ws.isAlive === false) {
+            return ws.terminate();
+        }
+        ws.isAlive = false;
+        ws.ping();
+    });
 }, 30000);
 
 wss.on('close', () => {
-  clearInterval(interval);
+    clearInterval(heartbeat);
 });
 
-console.log(`\n✅ Server ready!`);
-console.log(`   Web App: http://localhost:${PORT}`);
-console.log(`   API: http://localhost:${PORT}/api/health`);
+// Start server
+server.listen(PORT, () => {
+    console.log('✅ SERVER READY!');
+    console.log('   🌐 HTTP: http://localhost:' + PORT);
+    console.log('   🔌 WebSocket: ws://localhost:' + PORT);
+    console.log('   🏥 Health: http://localhost:' + PORT + '/api/health\n');
+});
