@@ -44,10 +44,14 @@ app.get('*', (req, res) => {
 });
 
 // =============================================================================
-// WEBSOCKET SERVER
+// WEBSOCKET SERVER WITH PING/PONG
 // =============================================================================
 
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({
+  server,
+  pingInterval: 20000,  // Ping every 20 seconds
+  pingTimeout: 5000     // Wait 5 seconds for pong
+});
 
 // Store connected users: { username: ws }
 let clients = {};
@@ -75,9 +79,17 @@ function sendToUser(username, data) {
   }
 }
 
+// WebSocket heartbeat for each connection
 wss.on("connection", (ws) => {
   console.log(`\n🟢 New connection`);
   console.log(`   Total connections: ${wss.clients.size}`);
+  
+  // Mark connection as alive
+  ws.isAlive = true;
+  
+  ws.on("pong", () => {
+    ws.isAlive = true;
+  });
 
   let username = null;
 
@@ -207,6 +219,21 @@ wss.on("connection", (ws) => {
   ws.on("error", (error) => {
     console.error(`❌ WebSocket error:`, error);
   });
+});
+
+// Interval to ping clients and close dead connections
+const interval = setInterval(() => {
+  wss.clients.forEach((ws) => {
+    if (ws.isAlive === false) {
+      return ws.terminate();
+    }
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30000);
+
+wss.on('close', () => {
+  clearInterval(interval);
 });
 
 console.log(`\n✅ Server ready!`);
