@@ -342,6 +342,45 @@
         </div>
     </div>
 
+    <!-- ==================== CALL MODAL ==================== -->
+    <div class="modal hidden" id="call-modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content call-modal">
+            <div class="call-header">
+                <button class="back-btn" id="call-back-btn">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h2 id="call-title">Voice Call</h2>
+                <div style="width: 40px;"></div>
+            </div>
+            
+            <div class="call-content">
+                <div class="call-avatar">
+                    <img src="" alt="Profile" id="call-avatar-img">
+                </div>
+                <h3 id="call-username">Username</h3>
+                <p id="call-status">Calling...</p>
+                
+                <div class="call-controls">
+                    <button class="call-btn mute-btn" id="mute-btn">
+                        <i class="fas fa-microphone"></i>
+                        <span>Mute</span>
+                    </button>
+                    <button class="call-btn speaker-btn" id="speaker-btn">
+                        <i class="fas fa-volume-up"></i>
+                        <span>Speaker</span>
+                    </button>
+                    <button class="call-btn end-btn" id="end-call-btn">
+                        <i class="fas fa-phone-slash"></i>
+                        <span>End</span>
+                    </button>
+                </div>
+                
+                <div class="call-timer" id="call-timer">00:00</div>
+            </div>
+        </div>
+    </div>
+
     <script src="js/app.js"></script>
 </body>
 </html>

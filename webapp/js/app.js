@@ -30,7 +30,13 @@ const state = {
     isConnected: false,
     onlineUsers: [],
     theme: 'light',
-    typingTimeout: null
+    typingTimeout: null,
+    // Call state
+    currentCall: null,
+    callTimer: null,
+    callStartTime: null,
+    isMuted: false,
+    isSpeakerOn: false
 };
 
 // ==================== DOM ELEMENTS ====================
@@ -101,7 +107,19 @@ const elements = {
     confirmMessage: document.getElementById('confirm-message'),
     confirmCancel: document.getElementById('confirm-cancel'),
     confirmOk: document.getElementById('confirm-ok'),
-    
+
+    // Call Modal
+    callModal: document.getElementById('call-modal'),
+    callBackBtn: document.getElementById('call-back-btn'),
+    callTitle: document.getElementById('call-title'),
+    callAvatarImg: document.getElementById('call-avatar-img'),
+    callUsername: document.getElementById('call-username'),
+    callStatus: document.getElementById('call-status'),
+    muteBtn: document.getElementById('mute-btn'),
+    speakerBtn: document.getElementById('speaker-btn'),
+    endCallBtn: document.getElementById('end-call-btn'),
+    callTimer: document.getElementById('call-timer'),
+
     // Settings Options
     changeProfilePicBtn: document.getElementById('change-profile-pic'),
     changeUsernameBtn: document.getElementById('change-username'),
@@ -309,11 +327,15 @@ function handleServerMessage(data) {
         case 'leave':
             handleUserLeave(data.user);
             break;
-            
+
         case 'typing':
             handleTypingIndicator(data.user);
             break;
-            
+
+        case 'call':
+            handleCallMessage(data);
+            break;
+
         case 'error':
             console.error('Server error:', data.message);
             break;
@@ -1025,6 +1047,131 @@ elements.confirmModal.querySelector('.modal-overlay').addEventListener('click', 
     elements.confirmModal.classList.add('hidden');
     confirmCallback = null;
 });
+
+// ==================== CALL FUNCTIONS ====================
+function startCall(isVideoCall = false) {
+    if (!state.currentChat) return;
+    
+    console.log('📞 Starting', isVideoCall ? 'video' : 'voice', 'call with', state.currentChat);
+    
+    state.currentCall = {
+        with: state.currentChat,
+        isVideo: isVideoCall,
+        startTime: Date.now()
+    };
+    
+    // Show call modal
+    elements.callUsername.textContent = state.currentChat;
+    elements.callTitle.textContent = isVideoCall ? 'Video Call' : 'Voice Call';
+    elements.callAvatarImg.src = getDefaultAvatar();
+    elements.callStatus.textContent = 'Calling...';
+    elements.callModal.classList.remove('hidden');
+    
+    // Send call request via WebSocket
+    sendMessage({
+        type: 'call',
+        action: 'start',
+        from: state.username,
+        to: state.currentChat,
+        isVideo: isVideoCall
+    });
+    
+    // Start timer
+    state.callStartTime = Date.now();
+    state.callTimer = setInterval(updateCallTimer, 1000);
+}
+
+function updateCallTimer() {
+    const elapsed = Math.floor((Date.now() - state.callStartTime) / 1000);
+    const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+    const seconds = (elapsed % 60).toString().padStart(2, '0');
+    elements.callTimer.textContent = `${minutes}:${seconds}`;
+}
+
+function endCall() {
+    if (!state.currentCall) return;
+    
+    console.log('📞 Ending call with', state.currentCall.with);
+    
+    // Send end call signal
+    sendMessage({
+        type: 'call',
+        action: 'end',
+        from: state.username,
+        to: state.currentCall.with
+    });
+    
+    // Stop timer
+    if (state.callTimer) {
+        clearInterval(state.callTimer);
+        state.callTimer = null;
+    }
+    
+    // Close modal
+    elements.callModal.classList.add('hidden');
+    state.currentCall = null;
+    state.isMuted = false;
+    state.isSpeakerOn = false;
+}
+
+function toggleMute() {
+    state.isMuted = !state.isMuted;
+    elements.muteBtn.classList.toggle('active', state.isMuted);
+    elements.muteBtn.innerHTML = state.isMuted 
+        ? '<i class="fas fa-microphone-slash"></i><span>Unmute</span>'
+        : '<i class="fas fa-microphone"></i><span>Mute</span>';
+}
+
+function toggleSpeaker() {
+    state.isSpeakerOn = !state.isSpeakerOn;
+    elements.speakerBtn.classList.toggle('active', state.isSpeakerOn);
+}
+
+// Call event listeners
+if (elements.callBackBtn) {
+    elements.callBackBtn.addEventListener('click', endCall);
+}
+
+if (elements.endCallBtn) {
+    elements.endCallBtn.addEventListener('click', endCall);
+}
+
+if (elements.muteBtn) {
+    elements.muteBtn.addEventListener('click', toggleMute);
+}
+
+if (elements.speakerBtn) {
+    elements.speakerBtn.addEventListener('click', toggleSpeaker);
+}
+
+elements.callModal.querySelector('.modal-overlay').addEventListener('click', endCall);
+
+// Handle incoming call messages
+function handleCallMessage(data) {
+    console.log('📞 Call message:', data);
+    
+    if (data.action === 'start') {
+        // Incoming call
+        const caller = data.from;
+        const isVideo = data.isVideo;
+        
+        if (confirm(`${caller} is ${isVideoCall ? 'video' : 'voice'} calling you. Accept?`)) {
+            startCall(isVideo);
+        }
+    } else if (data.action === 'end') {
+        // Call ended
+        endCall();
+    }
+}
+
+// Add call buttons event listeners
+if (elements.voiceCallBtn) {
+    elements.voiceCallBtn.addEventListener('click', () => startCall(false));
+}
+
+if (elements.videoCallBtn) {
+    elements.videoCallBtn.addEventListener('click', () => startCall(true));
+}
 
 // ==================== START APP ====================
 init();

@@ -165,6 +165,21 @@ wss.on("connection", (ws) => {
           });
           break;
 
+        case "call":
+          // Voice/Video call signaling
+          const { action, from, to, isVideo } = data;
+          console.log(`   📞 Call ${action}: ${from} -> ${to} (${isVideo ? 'video' : 'voice'})`);
+          
+          // Forward call signal to receiver
+          sendToUser(to, {
+            type: "call",
+            action: action,
+            from: from,
+            to: to,
+            isVideo: isVideo
+          });
+          break;
+
         case "leave":
           // User leaving
           const leavingUser = data.user;
