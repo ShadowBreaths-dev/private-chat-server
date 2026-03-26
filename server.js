@@ -24,23 +24,23 @@ const indexPath = path.join(webappPath, 'index.html');
 // Serve static files (css, js, images)
 app.use(express.static(webappPath));
 
-// Serve index.html for root and all other routes
+// Serve index.html for root
 app.get('/', (req, res) => {
   res.sendFile(indexPath);
 });
 
-// Handle all other routes - serve index.html (for SPA routing)
-app.get('*', (req, res) => {
-  res.sendFile(indexPath);
-});
-
-// Health check endpoint
+// Health check endpoint (MUST be before wildcard)
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     onlineUsers: getOnlineUsers().length,
     users: getOnlineUsers()
   });
+});
+
+// Handle all other routes - serve index.html (for SPA routing)
+app.get('*', (req, res) => {
+  res.sendFile(indexPath);
 });
 
 // =============================================================================

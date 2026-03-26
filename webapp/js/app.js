@@ -106,6 +106,7 @@ const elements = {
     changeProfilePicBtn: document.getElementById('change-profile-pic'),
     changeUsernameBtn: document.getElementById('change-username'),
     changeAboutBtn: document.getElementById('change-about'),
+    changeChatWallpaperBtn: document.getElementById('change-chat-wallpaper'),
     toggleThemeBtn: document.getElementById('toggle-theme'),
     clearChatHistoryBtn: document.getElementById('clear-chat-history'),
     exportChatsBtn: document.getElementById('export-chats'),
@@ -115,9 +116,10 @@ const elements = {
 // ==================== INITIALIZATION ====================
 function init() {
     loadFromStorage();
+    loadWallpaper();
     setupEventListeners();
     applyTheme();
-    
+
     // Check if user is already logged in
     if (state.username) {
         showAppScreen();
@@ -134,17 +136,24 @@ function loadFromStorage() {
         state.about = data.about || "Hey there! I'm using Oreo.";
         state.theme = data.theme || 'light';
     }
-    
+
     // Load messages
     const savedMessages = localStorage.getItem('oreo_messages');
     if (savedMessages) {
         state.messages = JSON.parse(savedMessages);
     }
-    
+
     // Load contacts
     const savedContacts = localStorage.getItem('oreo_contacts');
     if (savedContacts) {
         state.contacts = JSON.parse(savedContacts);
+    }
+}
+
+function loadWallpaper() {
+    const savedWallpaper = localStorage.getItem('oreo_chat_wallpaper');
+    if (savedWallpaper) {
+        document.documentElement.style.setProperty('--chat-wallpaper', `url(${savedWallpaper})`);
     }
 }
 
@@ -845,11 +854,37 @@ function setupEventListeners() {
     elements.changeProfilePicBtn.addEventListener('click', () => {
         elements.editProfilePicInput.click();
     });
-    
+
     elements.editProfilePicInput.addEventListener('change', (e) => {
         changeProfilePicture(e.target.files[0]);
     });
-    
+
+    // Change username - open profile edit modal
+    elements.changeUsernameBtn.addEventListener('click', () => {
+        elements.settingsModal.classList.add('hidden');
+        openProfileEdit();
+    });
+
+    // Change about - open profile edit modal
+    elements.changeAboutBtn.addEventListener('click', () => {
+        elements.settingsModal.classList.add('hidden');
+        openProfileEdit();
+    });
+
+    // Change chat wallpaper
+    elements.changeChatWallpaperBtn.addEventListener('click', () => {
+        const wallpaper = prompt('Enter wallpaper URL (or leave empty for default):');
+        if (wallpaper !== null) {
+            if (wallpaper.trim() === '') {
+                document.documentElement.style.setProperty('--chat-wallpaper', 'none');
+                localStorage.removeItem('oreo_chat_wallpaper');
+            } else {
+                document.documentElement.style.setProperty('--chat-wallpaper', `url(${wallpaper})`);
+                localStorage.setItem('oreo_chat_wallpaper', wallpaper);
+            }
+        }
+    });
+
     // Theme toggle
     elements.themeToggle.addEventListener('change', toggleTheme);
     
