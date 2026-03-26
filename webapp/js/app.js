@@ -331,24 +331,36 @@ function handleUserList(users) {
 function handleIncomingMessage(data) {
     const { sender, message, receiver } = data;
     
+    console.log('📨 Incoming message:', { sender, receiver, myUsername: state.username, currentChat: state.currentChat });
+
     // Save message to local storage
     saveMessage(sender, receiver, message);
+
+    // Check if this message is for me and I'm chatting with this person
+    const isMessageForMe = (receiver === state.username);
+    const isMessageFromCurrentChat = (sender === state.currentChat);
+    const isMessageToCurrentChat = (receiver === state.currentChat);
     
-    // If we're currently chatting with this person, display the message
-    if (state.currentChat === sender) {
+    console.log('🔍 Message check:', { isMessageForMe, isMessageFromCurrentChat, isMessageToCurrentChat });
+
+    // Display the message if:
+    // 1. Message is for me AND from the person I'm chatting with, OR
+    // 2. Message is from me (confirmation from server)
+    if ((isMessageForMe && isMessageFromCurrentChat) || (sender === state.username && receiver === state.currentChat)) {
+        console.log('✅ Displaying message in chat');
         appendMessage({
             sender: sender,
             message: message,
             timestamp: new Date().toISOString(),
-            isMine: false
+            isMine: sender === state.username
         });
         scrollToBottom();
     }
-    
-    // Update contact list
+
+    // Update contact list preview
     updateContactPreview(sender, message);
-    
-    // Show browser notification
+
+    // Show browser notification if window is hidden
     if (document.hidden && state.currentChat !== sender) {
         showNotification(sender, message);
     }
