@@ -77,13 +77,14 @@ function sendToUser(username, data) {
 
 wss.on("connection", (ws) => {
   console.log(`\n🟢 New connection`);
-  
+  console.log(`   Total connections: ${wss.clients.size}`);
+
   let username = null;
 
   ws.on("message", (message) => {
     try {
       const data = JSON.parse(message);
-      console.log(`📥 Received:`, data);
+      console.log(`📥 Received:`, JSON.stringify(data));
 
       switch(data.type) {
         case "join":
@@ -92,13 +93,16 @@ wss.on("connection", (ws) => {
           if (username) {
             clients[username] = ws;
             console.log(`   ${username} joined`);
-            
+            console.log(`   Online users: ${JSON.stringify(Object.keys(clients))}`);
+
             // Send user list to everyone
+            const userList = getOnlineUsers();
+            console.log(`   Broadcasting user list: ${JSON.stringify(userList)}`);
             broadcast({
               type: "user_list",
-              users: getOnlineUsers()
+              users: userList
             });
-            
+
             // Send join notification
             broadcast({
               type: "join",

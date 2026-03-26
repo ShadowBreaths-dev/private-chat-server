@@ -227,51 +227,59 @@ function showAppScreen() {
 
 // ==================== WEBSOCKET CONNECTION ====================
 function connectToServer() {
+    console.log('🔌 Attempting to connect to WebSocket:', SERVER_URL);
+    
     try {
         state.ws = new WebSocket(SERVER_URL);
-        
+
         state.ws.onopen = function() {
             state.isConnected = true;
-            console.log('Connected to server');
-            
-            // Send join message
-            sendMessage({ type: 'join', username: state.username });
-            
+            console.log('✅ WebSocket Connected:', SERVER_URL);
+            console.log('👤 Username:', state.username);
+
+            // Send join message immediately
+            const joinData = { type: 'join', username: state.username };
+            console.log('📤 Sending join:', joinData);
+            sendMessage(joinData);
+
             // Request user list
             setTimeout(() => {
+                console.log('📤 Requesting user list...');
                 sendMessage({ type: 'get_users' });
             }, 500);
         };
-        
+
         state.ws.onmessage = function(event) {
             try {
                 const data = JSON.parse(event.data);
+                console.log('📩 Received from server:', data);
                 handleServerMessage(data);
             } catch (e) {
-                console.error('Error parsing message:', e);
+                console.error('❌ Error parsing message:', e);
             }
         };
-        
+
         state.ws.onclose = function() {
             state.isConnected = false;
-            console.log('Disconnected from server');
+            console.log('🔴 WebSocket Disconnected');
             updateConnectionStatus();
-            
+
             // Auto-reconnect after 3 seconds
             setTimeout(() => {
                 if (!state.ws || state.ws.readyState === WebSocket.CLOSED) {
-                    console.log('Attempting to reconnect...');
+                    console.log('🔄 Attempting to reconnect...');
                     connectToServer();
                 }
             }, 3000);
         };
-        
+
         state.ws.onerror = function(error) {
-            console.error('WebSocket error:', error);
+            console.error('❌ WebSocket Error:', error);
+            console.log('WebSocket readyState:', state.ws.readyState);
         };
-        
+
     } catch (e) {
-        console.error('Connection error:', e);
+        console.error('❌ Connection error:', e);
         state.isConnected = false;
     }
 }
@@ -313,7 +321,9 @@ function handleServerMessage(data) {
 }
 
 function handleUserList(users) {
+    console.log('📋 Received user list:', users);
     state.onlineUsers = users.filter(u => u !== state.username);
+    console.log('👥 Online users (excluding self):', state.onlineUsers);
     renderOnlineUsers();
     updateConnectionStatus();
 }
@@ -591,17 +601,26 @@ function updateActiveContact() {
 
 // ==================== ONLINE USERS ====================
 function renderOnlineUsers() {
-    elements.onlineUsers.innerHTML = '';
+    console.log('🎨 Rendering online users:', state.onlineUsers);
     
-    if (state.onlineUsers.length === 0) {
-        elements.onlineUsers.innerHTML = `
-            <p style="text-align: center; color: var(--text-secondary); padding: 20px;">
-                No other users online
-            </p>
-        `;
+    if (!elements.onlineUsers) {
+        console.error('❌ elements.onlineUsers is null!');
         return;
     }
     
+    elements.onlineUsers.innerHTML = '';
+
+    if (state.onlineUsers.length === 0) {
+        elements.onlineUsers.innerHTML = `
+            <p style="text-align: center; color: var(--text-secondary); padding: 20px;">
+                <i class="fas fa-user-slash" style="font-size: 24px; margin-bottom: 10px; display: block;"></i>
+                No other users online
+            </p>
+        `;
+        console.log('ℹ️ No other users to display');
+        return;
+    }
+
     state.onlineUsers.forEach(username => {
         const item = document.createElement('div');
         item.className = 'online-user-item';
@@ -612,14 +631,16 @@ function renderOnlineUsers() {
                 <div class="online-user-status">online</div>
             </div>
         `;
-        
+
         item.addEventListener('click', () => {
             openChat(username);
             elements.newChatModal.classList.add('hidden');
         });
-        
+
         elements.onlineUsers.appendChild(item);
     });
+    
+    console.log('✅ Rendered', state.onlineUsers.length, 'online users');
 }
 
 // ==================== SETTINGS ====================
