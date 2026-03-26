@@ -331,37 +331,54 @@ function handleUserList(users) {
 function handleIncomingMessage(data) {
     const { sender, message, receiver } = data;
     
-    console.log('📨 Incoming message:', { sender, receiver, myUsername: state.username, currentChat: state.currentChat });
+    console.log('📨 === INCOMING MESSAGE ===');
+    console.log('   From:', sender);
+    console.log('   To:', receiver);
+    console.log('   My username:', state.username);
+    console.log('   Current chat:', state.currentChat);
+    console.log('   Message:', message);
 
-    // Save message to local storage
+    // Save message to local storage (always)
     saveMessage(sender, receiver, message);
 
-    // Check if this message is for me and I'm chatting with this person
-    const isMessageForMe = (receiver === state.username);
-    const isMessageFromCurrentChat = (sender === state.currentChat);
-    const isMessageToCurrentChat = (receiver === state.currentChat);
+    // Determine if this message should be displayed
+    const iAmSender = (sender === state.username);
+    const iAmReceiver = (receiver === state.username);
+    const chattingWithSender = (state.currentChat === sender);
+    const chattingWithReceiver = (state.currentChat === receiver);
     
-    console.log('🔍 Message check:', { isMessageForMe, isMessageFromCurrentChat, isMessageToCurrentChat });
+    console.log('   I am sender:', iAmSender);
+    console.log('   I am receiver:', iAmReceiver);
+    console.log('   Chatting with sender:', chattingWithSender);
+    console.log('   Chatting with receiver:', chattingWithReceiver);
 
-    // Display the message if:
-    // 1. Message is for me AND from the person I'm chatting with, OR
-    // 2. Message is from me (confirmation from server)
-    if ((isMessageForMe && isMessageFromCurrentChat) || (sender === state.username && receiver === state.currentChat)) {
-        console.log('✅ Displaying message in chat');
+    // Display message if:
+    // 1. I'm in a chat with the sender (receiving a message)
+    // 2. I'm in a chat with the receiver (my sent message confirmation)
+    const shouldDisplay = (iAmReceiver && chattingWithSender) || (iAmSender && chattingWithReceiver);
+    
+    console.log('   Should display:', shouldDisplay);
+
+    if (shouldDisplay) {
+        console.log('   ✅ Adding message to chat UI');
         appendMessage({
             sender: sender,
             message: message,
             timestamp: new Date().toISOString(),
-            isMine: sender === state.username
+            isMine: iAmSender  // My messages go on right, theirs on left
         });
         scrollToBottom();
+    } else {
+        console.log('   ℹ️ Message not displayed (not in active chat)');
     }
+    
+    console.log('📨 === END MESSAGE HANDLING ===\n');
 
-    // Update contact list preview
+    // Update contact list preview (always)
     updateContactPreview(sender, message);
 
-    // Show browser notification if window is hidden
-    if (document.hidden && state.currentChat !== sender) {
+    // Show browser notification if window is hidden and not in chat with sender
+    if (document.hidden && !chattingWithSender) {
         showNotification(sender, message);
     }
 }
@@ -425,30 +442,45 @@ function getMessagesForChat(otherUser) {
 
 function sendChatMessage() {
     const text = elements.messageInput.value.trim();
-    if (!text || !state.currentChat) return;
-    
+    if (!text || !state.currentChat) {
+        console.log('❌ Cannot send: no text or no current chat');
+        return;
+    }
+
+    console.log('📤 === SENDING MESSAGE ===');
+    console.log('   From:', state.username);
+    console.log('   To:', state.currentChat);
+    console.log('   Message:', text);
+    console.log('   WebSocket connected:', state.ws && state.ws.readyState === WebSocket.OPEN);
+
     // Send via WebSocket
-    sendMessage({
+    const messageData = {
         type: 'message',
         sender: state.username,
         receiver: state.currentChat,
         message: text
-    });
+    };
     
+    sendMessage(messageData);
+    console.log('   ✅ Message sent via WebSocket');
+
     // Save locally
     saveMessage(state.username, state.currentChat, text);
-    
-    // Display immediately
+
+    // Display immediately (my message on right side)
     appendMessage({
         sender: state.username,
         message: text,
         timestamp: new Date().toISOString(),
         isMine: true
     });
-    
+    console.log('   ✅ Message displayed in UI (isMine: true)');
+
     // Clear input
     elements.messageInput.value = '';
     scrollToBottom();
+    
+    console.log('📤 === END SEND ===\n');
 }
 
 function appendMessage(msg) {
