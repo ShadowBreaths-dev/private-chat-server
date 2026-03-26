@@ -19,27 +19,28 @@ const server = app.listen(PORT, () => {
 
 // Serve the webapp folder
 const webappPath = path.join(__dirname, 'webapp');
+const indexPath = path.join(webappPath, 'index.html');
 
-// Serve static files FIRST (css, js, images) - this must come before any routes
+// Serve static files (css, js, images)
 app.use(express.static(webappPath));
 
-// Serve index.html for root
+// Serve index.html for root and all other routes
 app.get('/', (req, res) => {
-  res.sendFile(path.join(webappPath, 'index.html'));
+  res.sendFile(indexPath);
 });
 
-// Health check endpoint (before wildcard)
+// Handle all other routes - serve index.html (for SPA routing)
+app.get('*', (req, res) => {
+  res.sendFile(indexPath);
+});
+
+// Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     onlineUsers: getOnlineUsers().length,
     users: getOnlineUsers()
   });
-});
-
-// Handle all other routes - serve index.html (for SPA routing)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(webappPath, 'index.html'));
 });
 
 // =============================================================================
