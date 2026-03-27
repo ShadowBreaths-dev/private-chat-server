@@ -874,11 +874,28 @@ function updateConnectionStatus() {
 
 // ==================== EVENT LISTENERS ====================
 function setupEventListeners() {
+    console.log('🔧 Setting up event listeners...');
+    
     // Login
-    elements.loginBtn?.addEventListener('click', handleLogin);
-    elements.usernameInput?.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleLogin();
-    });
+    console.log('Login button:', elements.loginBtn);
+    console.log('Username input:', elements.usernameInput);
+    
+    if (elements.loginBtn) {
+        elements.loginBtn.addEventListener('click', handleLogin);
+        console.log('✅ Login button listener added');
+    } else {
+        console.error('❌ Login button not found!');
+    }
+    
+    if (elements.usernameInput) {
+        elements.usernameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleLogin();
+        });
+        console.log('✅ Username input listener added');
+    } else {
+        console.error('❌ Username input not found!');
+    }
+    
     elements.loginProfilePic?.addEventListener('change', handleProfilePicUpload);
 
     // Main UI
@@ -988,12 +1005,17 @@ function setupEventListeners() {
 
 // ==================== LOGIN ====================
 function handleLogin() {
-    const username = elements.usernameInput.value.trim();
+    console.log('🔐 Login button clicked');
+    
+    const username = elements.usernameInput?.value.trim();
+    console.log('Username input value:', username);
+    
     if (!username) {
         alert('Please enter a username');
         return;
     }
 
+    console.log('Setting username:', username);
     state.username = username;
     state.profilePic = null;
 
@@ -1004,11 +1026,13 @@ function handleLogin() {
         reader.onload = (e) => {
             state.profilePic = e.target.result;
             saveToStorage();
+            console.log('Showing app screen with profile pic');
             showAppScreen();
         };
         reader.readAsDataURL(picInput.files[0]);
     } else {
         saveToStorage();
+        console.log('Showing app screen without profile pic');
         showAppScreen();
     }
 }
