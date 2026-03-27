@@ -79,6 +79,10 @@ const MAX_MESSAGES = 10000;
 // Last seen tracking: username -> timestamp
 const lastSeen = {};
 
+// Recently processed message IDs to prevent duplicates (timestamp-based cleanup)
+const processedMessageIds = new Set();
+const MAX_PROCESSED_IDS = 10000;
+
 // Call sessions: callId -> { from, to, status, isVideo }
 const callSessions = {};
 
@@ -306,15 +310,29 @@ function handleJoin(ws, data) {
 
 function handleMessage(ws, data) {
     const { sender, receiver, message: msgContent } = data;
-    
+
     if (!sender || !receiver || !msgContent) {
         ws.send(JSON.stringify({ type: 'error', message: 'Missing required fields' }));
         return;
     }
 
-    console.log('   💬 MESSAGE:', sender, '->', receiver, ':', msgContent.substring(0, 50));
-
     const messageId = data.messageId || generateMessageId();
+    
+    // PREVENT DUPLICATE: Check if we already processed this message ID
+    if (processedMessageIds.has(messageId)) {
+        console.log('   ⚠️ DUPLICATE message detected, ignoring:', messageId);
+        return;
+    }
+    processedMessageIds.add(messageId);
+    
+    // Clean up old processed IDs
+    if (processedMessageIds.size > MAX_PROCESSED_IDS) {
+        const arr = Array.from(processedMessageIds);
+        processedMessageIds.clear();
+        arr.slice(-5000).forEach(id => processedMessageIds.add(id));
+    }
+
+    console.log('   💬 MESSAGE:', sender, '->', receiver, ':', msgContent.substring(0, 50));
     const timestamp = data.timestamp || new Date().toISOString();
 
     const messageData = {
@@ -353,7 +371,7 @@ function handleMessage(ws, data) {
             messageQueue[receiver] = [];
         }
         messageQueue[receiver].push(messageData);
-        
+
         // Also send delivery confirmation to sender
         sendToUser(sender, {
             type: 'message_status',

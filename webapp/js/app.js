@@ -38,6 +38,7 @@ let state = {
     theme: 'light',
     sentMessageIds: new Set(),
     typingTimeout: null,
+    isSending: false,  // Prevent double-sending
     
     // Call state
     callState: {
@@ -539,11 +540,23 @@ function getChatKey(user1, user2) {
 }
 
 function sendChatMessage() {
+    // Prevent double-sending
+    if (state.isSending) {
+        console.log('⚠️ Already sending, ignoring duplicate');
+        return;
+    }
+    
     const text = elements.messageInput.value.trim();
     if (!text || !state.currentChat) return;
 
     const timestamp = new Date().toISOString();
     const messageId = `${state.username}-${state.currentChat}-${timestamp}-${text}`;
+
+    // Prevent duplicate message IDs
+    if (state.sentMessageIds.has(messageId)) {
+        console.log('⚠️ Duplicate message ID, skipping');
+        return;
+    }
 
     console.log('📤 Sending:', text, 'to', state.currentChat, 'messageId:', messageId);
 
@@ -558,6 +571,7 @@ function sendChatMessage() {
 
     state.sentMessageIds.add(messageId);
     state.messageStatus[messageId] = 'sent';
+    state.isSending = true;
 
     if (state.sentMessageIds.size > 1000) {
         const arr = Array.from(state.sentMessageIds);
@@ -580,6 +594,11 @@ function sendChatMessage() {
 
     elements.messageInput.value = '';
     scrollToBottom();
+
+    // Reset sending flag after short delay
+    setTimeout(() => {
+        state.isSending = false;
+    }, 300);
 }
 
 function appendMessage(msg) {
@@ -876,7 +895,10 @@ function setupEventListeners() {
     elements.backBtn?.addEventListener('click', closeChat);
     elements.sendBtn?.addEventListener('click', sendChatMessage);
     elements.messageInput?.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') sendChatMessage();
+        if (e.key === 'Enter') {
+            e.preventDefault();  // Prevent form submission
+            sendChatMessage();
+        }
     });
     elements.messageInput?.addEventListener('input', handleTyping);
 
