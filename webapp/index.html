@@ -353,30 +353,67 @@
                 <h2 id="call-title">Voice Call</h2>
                 <div style="width: 40px;"></div>
             </div>
-            
+
             <div class="call-content">
+                <!-- Video container will be inserted here for video calls -->
+                
                 <div class="call-avatar">
                     <img src="" alt="Profile" id="call-avatar-img">
                 </div>
                 <h3 id="call-username">Username</h3>
                 <p id="call-status">Calling...</p>
-                
+
                 <div class="call-controls">
-                    <button class="call-btn mute-btn" id="mute-btn">
-                        <i class="fas fa-microphone"></i>
-                        <span>Mute</span>
-                    </button>
-                    <button class="call-btn speaker-btn" id="speaker-btn">
-                        <i class="fas fa-volume-up"></i>
-                        <span>Speaker</span>
-                    </button>
-                    <button class="call-btn end-btn" id="end-call-btn">
-                        <i class="fas fa-phone-slash"></i>
-                        <span>End</span>
-                    </button>
+                    <!-- Controls will be inserted dynamically -->
                 </div>
-                
+
                 <div class="call-timer" id="call-timer">00:00</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== CHAT OPTIONS MENU ==================== -->
+    <div class="modal hidden" id="chat-options-modal">
+        <div class="modal-overlay"></div>
+        <div class="modal-content chat-options-modal">
+            <div class="modal-header">
+                <button class="back-btn" id="chat-options-back-btn">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h2>Chat Options</h2>
+            </div>
+
+            <div class="chat-options-content">
+                <div class="chat-option-item" id="search-in-chat">
+                    <i class="fas fa-search"></i>
+                    <div class="option-info">
+                        <span class="option-name">Search in chat</span>
+                    </div>
+                </div>
+
+                <div class="chat-option-item" id="clear-chat">
+                    <i class="fas fa-trash"></i>
+                    <div class="option-info">
+                        <span class="option-name">Clear chat</span>
+                        <span class="option-desc">Delete all messages for you</span>
+                    </div>
+                </div>
+
+                <div class="chat-option-item danger" id="delete-chat">
+                    <i class="fas fa-trash-alt"></i>
+                    <div class="option-info">
+                        <span class="option-name">Delete chat</span>
+                        <span class="option-desc">Delete entire conversation</span>
+                    </div>
+                </div>
+
+                <div class="chat-option-item" id="export-chat">
+                    <i class="fas fa-download"></i>
+                    <div class="option-info">
+                        <span class="option-name">Export chat</span>
+                        <span class="option-desc">Download chat history</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
