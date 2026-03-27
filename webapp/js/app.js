@@ -1472,7 +1472,8 @@ function showReactionPicker(e, messageId) {
 // ==================== WEBRTC CALLING (WhatsApp-like) ====================
 
 // Enhanced WebRTC configuration with more STUN servers
-const RTC_CONFIG = {
+// (RTC_CONFIG already defined at top of file)
+const ENHANCED_RTC_CONFIG = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
