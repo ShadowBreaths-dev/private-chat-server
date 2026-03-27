@@ -355,10 +355,12 @@ function handleMessage(ws, data) {
     // If receiver is online, deliver instantly
     if (clients[receiver] && clients[receiver].ws.readyState === WebSocket.OPEN) {
         console.log('   ✅ Delivered to', receiver);
+        console.log('   📤 Sending FULL message to RECEIVER only:', receiver);
         messageData.status = 'delivered';
         sendToUser(receiver, messageData);
 
-        // Send delivery confirmation to sender
+        // Send ONLY status (not full message) to sender
+        console.log('   📤 Sending STATUS ONLY to sender:', sender);
         sendToUser(sender, {
             type: 'message_status',
             messageId,
@@ -373,6 +375,7 @@ function handleMessage(ws, data) {
         messageQueue[receiver].push(messageData);
 
         // Also send delivery confirmation to sender
+        console.log('   📤 Sending STATUS ONLY to sender (receiver offline):', sender);
         sendToUser(sender, {
             type: 'message_status',
             messageId,
