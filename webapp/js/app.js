@@ -690,7 +690,7 @@ function openChat(username) {
 
     elements.chatName.textContent = username;
     elements.chatStatus.textContent = isUserOnline(username) ? 'online' : 'offline';
-    elements.chatProfileImg.src = getDefaultAvatar();
+    elements.chatProfileImg.src = getDefaultAvatar(username);
 
     loadChatHistory(username);
     elements.messageInput.focus();
@@ -763,7 +763,7 @@ function renderContacts() {
 
         item.innerHTML = `
             <div style="position:relative;">
-                <img src="${getDefaultAvatar()}" class="contact-avatar">
+                <img src="${getDefaultAvatar(contact.username)}" class="contact-avatar">
                 ${online ? '<span class="online-indicator"></span>' : ''}
             </div>
             <div class="contact-info">
@@ -821,7 +821,7 @@ function addNewContactToList(username, message) {
     const online = isUserOnline(username);
     item.innerHTML = `
         <div style="position:relative;">
-            <img src="${getDefaultAvatar()}" class="contact-avatar">
+            <img src="${getDefaultAvatar(username)}" class="contact-avatar">
             ${online ? '<span class="online-indicator"></span>' : ''}
         </div>
         <div class="contact-info">
@@ -851,7 +851,7 @@ function renderOnlineUsers() {
         item.className = 'online-user-item';
         item.innerHTML = `
             <div style="position:relative;display:inline-block;">
-                <img src="${getDefaultAvatar()}" class="online-user-avatar">
+                <img src="${getDefaultAvatar(user)}" class="online-user-avatar">
                 <span class="online-indicator"></span>
             </div>
             <span class="online-user-name">${escapeHtml(user)}</span>`;
@@ -2129,8 +2129,28 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-function getDefaultAvatar() {
-    return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect fill="%2300a884" width="100" height="100" rx="50"/><text x="50" y="65" font-size="50" text-anchor="middle" fill="white">👤</text></svg>';
+function getDefaultAvatar(username) {
+    // Generate a default avatar using SVG locally (no external API dependency)
+    const name = username || state.username || 'User';
+    const initials = name.substring(0, 2).toUpperCase();
+    
+    // Generate consistent color based on username
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const hue = hash % 360;
+    const bgColor = `hsl(${hue}, 60%, 40%)`;
+    
+    // Create SVG avatar
+    const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+            <rect width="128" height="128" fill="${encodeURIComponent(bgColor)}"/>
+            <text x="50%" y="55%" text-anchor="middle" dy=".3em" font-size="48" font-family="Segoe UI, Arial, sans-serif" font-weight="600" fill="white">${initials}</text>
+        </svg>
+    `.trim();
+    
+    return 'data:image/svg+xml,' + encodeURIComponent(svg);
 }
 
 // ==================== START APP ====================
