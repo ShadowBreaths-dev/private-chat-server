@@ -2140,17 +2140,14 @@ function getDefaultAvatar(username) {
         hash = name.charCodeAt(i) + ((hash << 5) - hash);
     }
     const hue = hash % 360;
-    const bgColor = `hsl(${hue}, 60%, 40%)`;
     
-    // Create SVG avatar
-    const svg = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
-            <rect width="128" height="128" fill="${encodeURIComponent(bgColor)}"/>
-            <text x="50%" y="55%" text-anchor="middle" dy=".3em" font-size="48" font-family="Segoe UI, Arial, sans-serif" font-weight="600" fill="white">${initials}</text>
-        </svg>
-    `.trim();
+    // Create SVG avatar with proper encoding
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">' +
+        '<rect width="128" height="128" fill="hsl(' + hue + ', 60%, 40%)"/>' +
+        '<text x="50%" y="55%" text-anchor="middle" dy=".3em" font-size="48" font-family="Segoe UI, Arial, sans-serif" font-weight="600" fill="white">' + initials + '</text>' +
+        '</svg>';
     
-    return 'data:image/svg+xml,' + encodeURIComponent(svg);
+    return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
 }
 
 // ==================== START APP ====================
