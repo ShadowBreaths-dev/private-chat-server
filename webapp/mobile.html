@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#00a884">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Oreo">
+    <title>Oreo Chat</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --primary: #00a884;
+            --primary-dark: #00796b;
+            --bg-color: #fff;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --text-muted: #999;
+            --border-color: #e0e0e0;
+            --hover-color: #f5f5f5;
+            --message-sent: #dcf8c6;
+            --message-received: #fff;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: var(--bg-color);
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+        }
+
+        .hidden { display: none !important; }
+
+        /* ==================== LOGIN SCREEN ==================== */
+        .login-screen {
+            height: 100%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            color: white;
+        }
+
+        .login-logo {
+            width: 100px;
+            height: 100px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .login-logo i { font-size: 50px; color: var(--primary); }
+        .login-title { font-size: 36px; font-weight: 700; margin-bottom: 8px; }
+        .login-subtitle { font-size: 14px; opacity: 0.9; margin-bottom: 40px; text-align: center; }
+
+        .profile-upload { text-align: center; margin-bottom: 30px; }
+        
+        .profile-preview {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 10px;
+            cursor: pointer;
+            border: 3px solid rgba(255,255,255,0.5);
+            overflow: hidden;
+        }
+
+        .profile-preview img { width: 100%; height: 100%; object-fit: cover; }
+        .profile-preview i { font-size: 32px; }
+
+        .upload-btn {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .input-group { width: 100%; margin-bottom: 20px; }
+        .input-group label { display: block; font-size: 13px; margin-bottom: 8px; opacity: 0.9; }
+        
+        .input-group input {
+            width: 100%;
+            padding: 14px 18px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            background: rgba(255,255,255,0.95);
+            color: #333;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 16px;
+            background: white;
+            color: var(--primary);
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        /* ==================== HOME SCREEN ==================== */
+        .home-screen {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .app-header {
+            background: var(--primary);
+            color: white;
+            padding: 12px 16px;
+            padding-top: max(12px, env(safe-area-inset-top));
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .app-name { font-size: 24px; font-weight: 700; }
+        .header-actions { display: flex; gap: 20px; }
+        .header-actions i { font-size: 20px; cursor: pointer; }
+
+        .my-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+        }
+
+        .my-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            overflow: hidden;
+        }
+
+        .my-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .my-username { font-size: 15px; font-weight: 500; }
+
+        .search-bar {
+            padding: 10px 16px;
+            background: #f8f8f8;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px 16px;
+            border-radius: 20px;
+            border: none;
+            background: white;
+            font-size: 14px;
+        }
+
+        .contacts-list {
+            flex: 1;
+            overflow-y: auto;
+            background: #fff;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+        }
+
+        .contact-item:active { background: var(--hover-color); }
+
+        .contact-avatar-wrapper { position: relative; margin-right: 12px; }
+
+        .contact-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .online-indicator {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            width: 14px;
+            height: 14px;
+            background: #4caf50;
+            border: 2px solid white;
+            border-radius: 50%;
+        }
+
+        .contact-info { flex: 1; min-width: 0; }
+
+        .contact-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .contact-name {
+            font-weight: 600;
+            font-size: 16px;
+            color: var(--text-primary);
+        }
+
+        .contact-time {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .contact-preview {
+            font-size: 14px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ==================== CHAT SCREEN ==================== */
+        .chat-screen {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            background: var(--primary);
+            color: white;
+            padding: 10px 12px;
+            padding-top: max(10px, env(safe-area-inset-top));
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 8px;
+        }
+
+        .chat-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            overflow: hidden;
+        }
+
+        .chat-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+        .chat-details { flex: 1; }
+        .chat-name { font-weight: 600; font-size: 16px; }
+        .chat-status { font-size: 12px; opacity: 0.9; }
+
+        .chat-actions {
+            display: flex;
+            gap: 18px;
+            padding-right: 8px;
+        }
+
+        .chat-actions i { font-size: 18px; cursor: pointer; }
+
+        .messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            background: #e5ddd5;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message.sent { align-items: flex-end; }
+        .message.received { align-items: flex-start; }
+
+        .message-bubble {
+            max-width: 75%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 15px;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .message.sent .message-bubble {
+            background: var(--message-sent);
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.received .message-bubble {
+            background: var(--message-received);
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            padding: 0 4px;
+        }
+
+        .message-input-area {
+            padding: 10px;
+            background: #f0f0f0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding-bottom: max(10px, env(safe-area-inset-bottom));
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 20px;
+            border: none;
+            font-size: 15px;
+            background: white;
+        }
+
+        .send-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: none;
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        /* ==================== BOTTOM NAV ==================== */
+        .bottom-nav {
+            height: 60px;
+            background: white;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .nav-item.active { color: var(--primary); }
+        .nav-item i { font-size: 20px; }
+        .nav-item span { font-size: 11px; }
+
+        /* ==================== CONNECTION STATUS ==================== */
+        .connection-status {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: #ff9800;
+            color: white;
+            text-align: center;
+            padding: 6px;
+            font-size: 12px;
+            z-index: 1000;
+            display: none;
+        }
+
+        .connection-status.show { display: block; }
+        .connection-status.connected { display: none; }
+        .connection-status.error { background: #f44336; }
+    </style>
+</head>
+<body>
+    <!-- Connection Status -->
+    <div id="connection-status" class="connection-status">
+        <i class="fas fa-wifi"></i> <span id="connection-text">Connecting...</span>
+    </div>
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="login-screen">
+        <div class="login-logo">
+            <i class="fas fa-cookie-bite"></i>
+        </div>
+        <h1 class="login-title">Oreo</h1>
+        <p class="login-subtitle">Private Real-Time Messaging</p>
+        
+        <div class="profile-upload">
+            <div class="profile-preview" id="login-profile-preview">
+                <i class="fas fa-user"></i>
+            </div>
+            <label for="login-profile-pic" class="upload-btn">
+                <i class="fas fa-camera"></i>
+                <span>Upload Photo</span>
+            </label>
+            <input type="file" id="login-profile-pic" accept="image/*" hidden>
+        </div>
+
+        <div class="input-group">
+            <label>Username</label>
+            <input type="text" id="username-input" placeholder="Enter your username" maxlength="20" autocomplete="off">
+        </div>
+
+        <button class="btn-primary" id="login-btn">
+            <span>Start Chatting</span>
+            <i class="fas fa-arrow-right"></i>
+        </button>
+    </div>
+
+    <!-- HOME SCREEN -->
+    <div id="home-screen" class="home-screen hidden">
+        <div class="app-header">
+            <div class="header-top">
+                <div class="app-name">Oreo</div>
+                <div class="header-actions">
+                    <i class="fas fa-plus-circle" id="new-chat-btn"></i>
+                    <i class="fas fa-ellipsis-v" id="menu-btn"></i>
+                </div>
+            </div>
+            <div class="my-profile">
+                <div class="my-avatar">
+                    <img src="" alt="Profile" id="my-avatar">
+                </div>
+                <span class="my-username" id="my-username">User</span>
+            </div>
+        </div>
+
+        <div class="search-bar">
+            <input type="text" class="search-input" id="search-input" placeholder="Search or start new chat">
+        </div>
+
+        <div class="contacts-list" id="contacts-list"></div>
+
+        <div class="bottom-nav">
+            <div class="nav-item active">
+                <i class="fas fa-comment"></i>
+                <span>Chats</span>
+            </div>
+            <div class="nav-item" id="nav-calls">
+                <i class="fas fa-phone"></i>
+                <span>Calls</span>
+            </div>
+            <div class="nav-item" id="nav-profile">
+                <i class="fas fa-user"></i>
+                <span>Profile</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- CHAT SCREEN -->
+    <div id="chat-screen" class="chat-screen hidden">
+        <div class="chat-header">
+            <button class="back-btn" id="back-btn">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div class="chat-avatar">
+                <img src="" alt="Profile" id="chat-avatar">
+            </div>
+            <div class="chat-details">
+                <div class="chat-name" id="chat-name">User</div>
+                <div class="chat-status" id="chat-status">online</div>
+            </div>
+            <div class="chat-actions">
+                <i class="fas fa-phone" id="voice-call-btn"></i>
+                <i class="fas fa-video" id="video-call-btn"></i>
+                <i class="fas fa-ellipsis-v"></i>
+            </div>
+        </div>
+
+        <div class="messages-container" id="messages-container"></div>
+
+        <div class="message-input-area">
+            <input type="text" class="message-input" id="message-input" placeholder="Type a message" autocomplete="off">
+            <button class="send-btn" id="send-btn">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ==================== STATE ====================
+        let state = {
+            username: null,
+            profilePic: null,
+            currentChat: null,
+            messages: {},
+            onlineUsers: [],
+            ws: null,
+            isConnected: false,
+            reconnectAttempts: 0
+        };
+
+        // ==================== DOM ELEMENTS ====================
+        const elements = {
+            loginScreen: document.getElementById('login-screen'),
+            homeScreen: document.getElementById('home-screen'),
+            chatScreen: document.getElementById('chat-screen'),
+            usernameInput: document.getElementById('username-input'),
+            loginBtn: document.getElementById('login-btn'),
+            myAvatar: document.getElementById('my-avatar'),
+            myUsername: document.getElementById('my-username'),
+            contactsList: document.getElementById('contacts-list'),
+            chatName: document.getElementById('chat-name'),
+            chatStatus: document.getElementById('chat-status'),
+            chatAvatar: document.getElementById('chat-avatar'),
+            messagesContainer: document.getElementById('messages-container'),
+            messageInput: document.getElementById('message-input'),
+            sendBtn: document.getElementById('send-btn'),
+            backBtn: document.getElementById('back-btn'),
+            newChatBtn: document.getElementById('new-chat-btn'),
+            loginProfilePic: document.getElementById('login-profile-pic'),
+            loginProfilePreview: document.getElementById('login-profile-preview'),
+            connectionStatus: document.getElementById('connection-status'),
+            connectionText: document.getElementById('connection-text')
+        };
+
+        // ==================== WEBSOCKET CONFIG ====================
+        function getServerUrl() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const host = window.location.host || 'localhost:3000';
+            return `${protocol}//${host}`;
+        }
+
+        // ==================== AVATAR GENERATION ====================
+        function getDefaultAvatar(username) {
+            const name = username || 'User';
+            const initials = name.substring(0, 2).toUpperCase();
+            
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) {
+                hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const hue = hash % 360;
+            
+            const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">' +
+                '<rect width="128" height="128" fill="hsl(' + hue + ', 60%, 40%)"/>' +
+                '<text x="50%" y="55%" text-anchor="middle" dy=".3em" font-size="48" font-family="Segoe UI, Arial, sans-serif" font-weight="600" fill="white">' + initials + '</text>' +
+                '</svg>';
+            
+            return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+        }
+
+        // ==================== WEBSOCKET CONNECTION ====================
+        function connect() {
+            if (state.ws) {
+                state.ws.close();
+            }
+
+            const url = getServerUrl();
+            console.log('Connecting to:', url);
+            
+            state.ws = new WebSocket(url);
+
+            state.ws.onopen = () => {
+                console.log('Connected to server');
+                state.isConnected = true;
+                state.reconnectAttempts = 0;
+                updateConnectionStatus(true);
+                
+                // Send login message
+                if (state.username) {
+                    state.ws.send(JSON.stringify({
+                        type: 'login',
+                        username: state.username
+                    }));
+                }
+            };
+
+            state.ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleMessage(data);
+                } catch (e) {
+                    console.error('Error parsing message:', e);
+                }
+            };
+
+            state.ws.onclose = () => {
+                console.log('Disconnected from server');
+                state.isConnected = false;
+                updateConnectionStatus(false);
+                
+                // Auto-reconnect
+                if (state.username) {
+                    setTimeout(() => {
+                        state.reconnectAttempts++;
+                        console.log('Reconnecting... Attempt', state.reconnectAttempts);
+                        connect();
+                    }, Math.min(1000 * state.reconnectAttempts, 5000));
+                }
+            };
+
+            state.ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+                updateConnectionStatus(false, true);
+            };
+        }
+
+        function handleMessage(data) {
+            console.log('Received:', data);
+            
+            switch (data.type) {
+                case 'online_users':
+                    state.onlineUsers = data.users || [];
+                    renderContacts();
+                    break;
+                    
+                case 'message':
+                    handleIncomingMessage(data);
+                    break;
+                    
+                case 'user_joined':
+                    if (!state.onlineUsers.includes(data.username)) {
+                        state.onlineUsers.push(data.username);
+                        renderContacts();
+                    }
+                    break;
+                    
+                case 'user_left':
+                    state.onlineUsers = state.onlineUsers.filter(u => u !== data.username);
+                    renderContacts();
+                    break;
+            }
+        }
+
+        function handleIncomingMessage(data) {
+            const { from, message, timestamp } = data;
+            
+            // Only process if it's for current chat or from current chat partner
+            if (state.currentChat === from) {
+                addMessageToUI(from, message, timestamp, false);
+            }
+            
+            // Store message
+            const key = getChatKey(from);
+            if (!state.messages[key]) {
+                state.messages[key] = [];
+            }
+            state.messages[key].push({
+                sender: from,
+                message: message,
+                timestamp: timestamp
+            });
+            
+            // Update contacts list
+            renderContacts();
+        }
+
+        // ==================== UI FUNCTIONS ====================
+        function updateConnectionStatus(connected, isError = false) {
+            if (connected) {
+                elements.connectionStatus.className = 'connection-status connected';
+            } else {
+                elements.connectionStatus.className = 'connection-status show' + (isError ? ' error' : '');
+                elements.connectionText.textContent = isError ? 'Connection lost' : 'Connecting...';
+            }
+        }
+
+        function getChatKey(username) {
+            const users = [state.username, username].sort();
+            return users.join('::');
+        }
+
+        function formatTime(timestamp) {
+            if (!timestamp) return '';
+            try {
+                const date = new Date(timestamp);
+                const now = new Date();
+                const isToday = date.toDateString() === now.toDateString();
+                
+                if (isToday) {
+                    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                }
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            } catch {
+                return '';
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function renderContacts() {
+            elements.contactsList.innerHTML = '';
+            
+            const contacts = state.onlineUsers.filter(u => u !== state.username);
+            
+            if (contacts.length === 0) {
+                elements.contactsList.innerHTML = `
+                    <div style="padding: 40px 20px; text-align: center; color: #999;">
+                        <i class="fas fa-users" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+                        <p>No users online</p>
+                        <p style="font-size: 13px;">Wait for others to join</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            contacts.forEach(username => {
+                const key = getChatKey(username);
+                const msgs = state.messages[key] || [];
+                const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
+                const time = lastMsg ? formatTime(lastMsg.timestamp) : '';
+                const preview = lastMsg ? lastMsg.message : 'Tap to start chatting';
+                
+                const item = document.createElement('div');
+                item.className = 'contact-item';
+                item.innerHTML = `
+                    <div class="contact-avatar-wrapper">
+                        <img src="${getDefaultAvatar(username)}" alt="${username}" class="contact-avatar">
+                        <span class="online-indicator"></span>
+                    </div>
+                    <div class="contact-info">
+                        <div class="contact-header">
+                            <span class="contact-name">${escapeHtml(username)}</span>
+                            <span class="contact-time">${time}</span>
+                        </div>
+                        <div class="contact-preview">${escapeHtml(preview)}</div>
+                    </div>
+                `;
+                
+                item.addEventListener('click', () => openChat(username));
+                elements.contactsList.appendChild(item);
+            });
+        }
+
+        function openChat(username) {
+            state.currentChat = username;
+            elements.chatName.textContent = username;
+            elements.chatAvatar.src = getDefaultAvatar(username);
+            elements.chatStatus.textContent = 'online';
+            
+            elements.homeScreen.classList.add('hidden');
+            elements.chatScreen.classList.remove('hidden');
+            
+            loadChatHistory(username);
+        }
+
+        function loadChatHistory(username) {
+            const key = getChatKey(username);
+            const messages = state.messages[key] || [];
+            
+            elements.messagesContainer.innerHTML = '';
+            
+            messages.forEach(msg => {
+                const isSent = msg.sender === state.username;
+                addMessageToUI(msg.sender, msg.message, msg.timestamp, isSent);
+            });
+            
+            elements.messagesContainer.scrollTop = elements.messagesContainer.scrollHeight;
+        }
+
+        function addMessageToUI(sender, text, timestamp, isSent) {
+            const messageEl = document.createElement('div');
+            messageEl.className = `message ${isSent ? 'sent' : 'received'}`;
+            messageEl.innerHTML = `
+                <div class="message-bubble">${escapeHtml(text)}</div>
+                <div class="message-time">${formatTime(timestamp)}</div>
+            `;
+            elements.messagesContainer.appendChild(messageEl);
+            elements.messagesContainer.scrollTop = elements.messagesContainer.scrollHeight;
+        }
+
+        function sendMessage() {
+            const text = elements.messageInput.value.trim();
+            if (!text || !state.currentChat || !state.isConnected) return;
+            
+            const messageData = {
+                type: 'message',
+                to: state.currentChat,
+                message: text
+            };
+            
+            state.ws.send(JSON.stringify(messageData));
+            elements.messageInput.value = '';
+        }
+
+        // ==================== EVENT LISTENERS ====================
+        elements.loginBtn.addEventListener('click', () => {
+            const username = elements.usernameInput.value.trim();
+            if (username) {
+                state.username = username;
+                localStorage.setItem('oreo_username', username);
+                
+                elements.myUsername.textContent = username;
+                elements.myAvatar.src = getDefaultAvatar(username);
+                
+                elements.loginScreen.classList.add('hidden');
+                elements.homeScreen.classList.remove('hidden');
+                
+                connect();
+            }
+        });
+
+        elements.sendBtn.addEventListener('click', sendMessage);
+        
+        elements.messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        elements.backBtn.addEventListener('click', () => {
+            elements.chatScreen.classList.add('hidden');
+            elements.homeScreen.classList.remove('hidden');
+            state.currentChat = null;
+        });
+
+        elements.loginProfilePic.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    elements.loginProfilePreview.innerHTML = `<img src="${e.target.result}" alt="Profile">`;
+                    state.profilePic = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Search functionality
+        elements.searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const items = elements.contactsList.querySelectorAll('.contact-item');
+            
+            items.forEach(item => {
+                const name = item.querySelector('.contact-name').textContent.toLowerCase();
+                item.style.display = name.includes(query) ? 'flex' : 'none';
+            });
+        });
+
+        // ==================== INITIALIZATION ====================
+        window.addEventListener('load', () => {
+            // Check for saved username
+            const savedUsername = localStorage.getItem('oreo_username');
+            if (savedUsername) {
+                elements.usernameInput.value = savedUsername;
+            }
+            
+            // Register service worker
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js')
+                    .then(() => console.log('Service Worker registered'))
+                    .catch(err => console.error('SW registration failed:', err));
+            }
+        });
+    </script>
+</body>
+</html>
